@@ -23,6 +23,16 @@ export const initialPengaturanSekolah: PengaturanSekolah = {
   semester: 'Ganjil',
   emailSekolah: 'info@smpn1merdeka.sch.id',
   websiteSekolah: 'www.smpn1merdeka.sch.id',
+  kopBaris1: 'PEMERINTAH KOTA DENPASAR',
+  kopBaris2: 'DINAS PENDIDIKAN KEPEMUDAAN DAN OLAHRAGA',
+  kopBaris3: 'SMP NEGERI 1 MERDEKA',
+  kopAlamat: 'Jalan Pendidikan No. 45, Denpasar, Bali 80234',
+  kopKontak: 'Telepon: (0361) 234567 · NPSN: 50102030 · Akreditasi A',
+  kopWebsiteEmail: 'Email: info@smpn1merdeka.sch.id · Website: www.smpn1merdeka.sch.id',
+  kopKotaSurat: 'Denpasar',
+  kopTampilkanLogoKiri: true,
+  kopTampilkanLogoKanan: true,
+  kopGarisTipe: 'double',
 };
 
 export const initialAccounts: UserAccount[] = [

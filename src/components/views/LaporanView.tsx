@@ -96,49 +96,79 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
       <div className="bg-white p-8 md:p-12 rounded-2xl border border-slate-200/80 shadow-md print-container">
         
         {/* Official Kop Sekolah */}
-        <div className="flex items-center justify-between border-b-4 border-double border-slate-900 pb-4 mb-6 gap-4 text-center">
-          {/* Logo Kabupaten / Pemda (Left) */}
-          <div className="w-20 h-20 flex items-center justify-center shrink-0">
-            {state.pengaturanSekolah.logoKabupatenUrl ? (
-              <img
-                src={state.pengaturanSekolah.logoKabupatenUrl}
-                alt="Logo Pemda"
-                className="max-h-full max-w-full object-contain"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold p-1">
-                Logo Pemda
-              </div>
-            )}
-          </div>
+        <div
+          className={`flex items-center justify-between pb-4 mb-6 gap-4 text-center ${
+            (state.pengaturanSekolah.kopGarisTipe || 'double') === 'double'
+              ? 'border-b-4 border-double border-slate-900'
+              : state.pengaturanSekolah.kopGarisTipe === 'single'
+              ? 'border-b-2 border-slate-900'
+              : 'border-b border-transparent'
+          }`}
+        >
+          {/* Logo Kabupaten / Pemda / Yayasan (Left) */}
+          {(state.pengaturanSekolah.kopTampilkanLogoKiri ?? true) && (
+            <div className="w-20 h-20 flex items-center justify-center shrink-0">
+              {state.pengaturanSekolah.logoKabupatenUrl ? (
+                <img
+                  src={state.pengaturanSekolah.logoKabupatenUrl}
+                  alt="Logo Pemda"
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold p-1">
+                  Logo Pemda
+                </div>
+              )}
+            </div>
+          )}
 
           {/* School Header Text (Center) */}
-          <div className="flex-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-700">
-              {state.pengaturanSekolah.namaKabupaten || 'Pemerintah Kota Denpasar'} · Dinas Pendidikan
+          <div className="flex-1 px-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              {state.pengaturanSekolah.kopBaris1 ||
+                (state.pengaturanSekolah.namaKabupaten
+                  ? state.pengaturanSekolah.namaKabupaten.toUpperCase()
+                  : 'PEMERINTAH KOTA DENPASAR')}
             </h2>
+            {state.pengaturanSekolah.kopBaris2 && (
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mt-0.5">
+                {state.pengaturanSekolah.kopBaris2}
+              </h3>
+            )}
             <h1 className="text-xl font-black uppercase text-slate-900 tracking-tight mt-0.5">
-              {state.pengaturanSekolah.namaSekolah}
+              {state.pengaturanSekolah.kopBaris3 || state.pengaturanSekolah.namaSekolah.toUpperCase()}
             </h1>
             <p className="text-[11px] text-slate-600 font-medium mt-0.5">
-              {state.pengaturanSekolah.alamatSekolah} · Telp: {state.pengaturanSekolah.teleponSekolah} · NPSN: {state.pengaturanSekolah.npsn}
+              {state.pengaturanSekolah.kopAlamat || state.pengaturanSekolah.alamatSekolah}
             </p>
+            {state.pengaturanSekolah.kopKontak && (
+              <p className="text-[10px] text-slate-600 font-medium mt-0.5">
+                {state.pengaturanSekolah.kopKontak}
+              </p>
+            )}
+            {state.pengaturanSekolah.kopWebsiteEmail && (
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                {state.pengaturanSekolah.kopWebsiteEmail}
+              </p>
+            )}
           </div>
 
           {/* Logo Sekolah (Right) */}
-          <div className="w-20 h-20 flex items-center justify-center shrink-0">
-            {state.pengaturanSekolah.logoSekolahUrl ? (
-              <img
-                src={state.pengaturanSekolah.logoSekolahUrl}
-                alt="Logo Sekolah"
-                className="max-h-full max-w-full object-contain"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold p-1">
-                Logo Sekolah
-              </div>
-            )}
-          </div>
+          {(state.pengaturanSekolah.kopTampilkanLogoKanan ?? true) && (
+            <div className="w-20 h-20 flex items-center justify-center shrink-0">
+              {state.pengaturanSekolah.logoSekolahUrl ? (
+                <img
+                  src={state.pengaturanSekolah.logoSekolahUrl}
+                  alt="Logo Sekolah"
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold p-1">
+                  Logo Sekolah
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Document Title Header */}
@@ -301,7 +331,15 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
           </div>
 
           <div>
-            <p>Denpasar, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p>
+              {state.pengaturanSekolah.kopKotaSurat ||
+                state.pengaturanSekolah.namaKabupaten?.replace(
+                  /^(Pemerintah\s+Kota|Pemerintah\s+Kabupaten|Kota|Kabupaten)\s+/i,
+                  ''
+                ) ||
+                'Denpasar'}
+              , {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
             <p className="font-bold mt-1">Guru Mata Pelajaran</p>
             <div className="h-16" />
             <p className="font-bold underline">{state.profil.nama}</p>

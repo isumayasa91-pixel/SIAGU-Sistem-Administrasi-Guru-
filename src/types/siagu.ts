@@ -125,6 +125,17 @@ export interface PengaturanSekolah {
   logoSekolahUrl?: string;
   logoKabupatenUrl?: string;
   namaKabupaten?: string;
+  // Kop Surat fields
+  kopBaris1?: string;
+  kopBaris2?: string;
+  kopBaris3?: string;
+  kopAlamat?: string;
+  kopKontak?: string;
+  kopWebsiteEmail?: string;
+  kopKotaSurat?: string;
+  kopTampilkanLogoKiri?: boolean;
+  kopTampilkanLogoKanan?: boolean;
+  kopGarisTipe?: 'double' | 'single' | 'none';
 }
 
 export interface ProfilGuru {

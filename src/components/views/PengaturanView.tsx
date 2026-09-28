@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   FileSpreadsheet,
+  FileText,
+  Eye,
+  RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { SiaguState } from '../../utils/storage';
@@ -53,7 +57,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   const isAdmin = state.currentUser?.role === 'admin';
 
   // If not admin, default to 'profil' tab
-  const [activeSubTab, setActiveTool] = useState<'sekolah' | 'profil' | 'akun' | 'sistem'>(
+  const [activeSubTab, setActiveTool] = useState<'sekolah' | 'kop' | 'profil' | 'akun' | 'sistem'>(
     isAdmin ? 'sekolah' : 'profil'
   );
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -77,6 +81,43 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   );
   const [logoKabupatenUrl, setLogoKabupatenUrl] = useState<string>(
     state.pengaturanSekolah.logoKabupatenUrl || ''
+  );
+
+  // Form State: Kop Surat (Admin Only)
+  const [kopBaris1, setKopBaris1] = useState<string>(
+    state.pengaturanSekolah.kopBaris1 ||
+      (state.pengaturanSekolah.namaKabupaten ? state.pengaturanSekolah.namaKabupaten.toUpperCase() : 'PEMERINTAH KOTA DENPASAR')
+  );
+  const [kopBaris2, setKopBaris2] = useState<string>(
+    state.pengaturanSekolah.kopBaris2 || 'DINAS PENDIDIKAN KEPEMUDAAN DAN OLAHRAGA'
+  );
+  const [kopBaris3, setKopBaris3] = useState<string>(
+    state.pengaturanSekolah.kopBaris3 || state.pengaturanSekolah.namaSekolah.toUpperCase()
+  );
+  const [kopAlamat, setKopAlamat] = useState<string>(
+    state.pengaturanSekolah.kopAlamat || state.pengaturanSekolah.alamatSekolah
+  );
+  const [kopKontak, setKopKontak] = useState<string>(
+    state.pengaturanSekolah.kopKontak ||
+      `Telepon: ${state.pengaturanSekolah.teleponSekolah} · NPSN: ${state.pengaturanSekolah.npsn}`
+  );
+  const [kopWebsiteEmail, setKopWebsiteEmail] = useState<string>(
+    state.pengaturanSekolah.kopWebsiteEmail ||
+      `Email: ${state.pengaturanSekolah.emailSekolah || 'info@smpn1merdeka.sch.id'} · Website: ${state.pengaturanSekolah.websiteSekolah || 'www.smpn1merdeka.sch.id'}`
+  );
+  const [kopKotaSurat, setKopKotaSurat] = useState<string>(
+    state.pengaturanSekolah.kopKotaSurat ||
+      state.pengaturanSekolah.namaKabupaten?.replace(/^(Pemerintah\s+Kota|Pemerintah\s+Kabupaten|Kota|Kabupaten)\s+/i, '') ||
+      'Denpasar'
+  );
+  const [kopTampilkanLogoKiri, setKopTampilkanLogoKiri] = useState<boolean>(
+    state.pengaturanSekolah.kopTampilkanLogoKiri ?? true
+  );
+  const [kopTampilkanLogoKanan, setKopTampilkanLogoKanan] = useState<boolean>(
+    state.pengaturanSekolah.kopTampilkanLogoKanan ?? true
+  );
+  const [kopGarisTipe, setKopGarisTipe] = useState<'double' | 'single' | 'none'>(
+    state.pengaturanSekolah.kopGarisTipe || 'double'
   );
 
   // Form State: Profil Logged In User (Guru / Siswa / Admin)
@@ -143,6 +184,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     }
 
     const updatedSekolah: PengaturanSekolah = {
+      ...state.pengaturanSekolah,
       namaSekolah: sekNama,
       npsn: sekNpsn,
       namaKabupaten: sekKabupaten,
@@ -154,6 +196,16 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
       semester: sekSemester,
       logoSekolahUrl,
       logoKabupatenUrl,
+      kopBaris1,
+      kopBaris2,
+      kopBaris3,
+      kopAlamat,
+      kopKontak,
+      kopWebsiteEmail,
+      kopKotaSurat,
+      kopTampilkanLogoKiri,
+      kopTampilkanLogoKanan,
+      kopGarisTipe,
     };
     onUpdatePengaturanSekolah(updatedSekolah);
 
@@ -168,6 +220,68 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     });
 
     triggerSuccessNotification();
+  };
+
+  const handleSaveKopSurat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      alert('Akses Ditolak: Hanya Admin yang berhak mengedit kop surat.');
+      return;
+    }
+
+    const updatedSekolah: PengaturanSekolah = {
+      ...state.pengaturanSekolah,
+      logoSekolahUrl,
+      logoKabupatenUrl,
+      kopBaris1,
+      kopBaris2,
+      kopBaris3,
+      kopAlamat,
+      kopKontak,
+      kopWebsiteEmail,
+      kopKotaSurat,
+      kopTampilkanLogoKiri,
+      kopTampilkanLogoKanan,
+      kopGarisTipe,
+    };
+    onUpdatePengaturanSekolah(updatedSekolah);
+    triggerSuccessNotification();
+  };
+
+  const handleSyncFromSchoolData = () => {
+    setKopBaris1(sekKabupaten ? sekKabupaten.toUpperCase() : 'PEMERINTAH KOTA DENPASAR');
+    setKopBaris2('DINAS PENDIDIKAN KEPEMUDAAN DAN OLAHRAGA');
+    setKopBaris3(sekNama.toUpperCase());
+    setKopAlamat(sekAlamat);
+    setKopKontak(`Telepon: ${sekTelp} · NPSN: ${sekNpsn} · Akreditasi A`);
+    setKopWebsiteEmail(
+      `Email: ${state.pengaturanSekolah.emailSekolah || 'info@sekolah.sch.id'} · Website: ${state.pengaturanSekolah.websiteSekolah || 'www.sekolah.sch.id'}`
+    );
+    setKopKotaSurat(
+      sekKabupaten?.replace(/^(Pemerintah\s+Kota|Pemerintah\s+Kabupaten|Kota|Kabupaten)\s+/i, '') ||
+        'Denpasar'
+    );
+    setKopTampilkanLogoKiri(true);
+    setKopTampilkanLogoKanan(true);
+    setKopGarisTipe('double');
+  };
+
+  const handleApplyPresetYayasan = () => {
+    setKopBaris1('YAYASAN PENDIDIKAN DAN KEBUDAYAAN NASIONAL');
+    setKopBaris2('BADAN PENGELOLA PERGURUAN MENENGAH PERTAMA');
+    setKopBaris3(sekNama.toUpperCase());
+    setKopAlamat(sekAlamat);
+    setKopKontak(`Telepon: ${sekTelp} · NPSN: ${sekNpsn} · Akreditasi A`);
+    setKopWebsiteEmail(
+      `Email: sekretariat@yayasanpendidikan.sch.id · Website: www.yayasanpendidikan.sch.id`
+    );
+    setKopKotaSurat(
+      sekKabupaten?.replace(/^(Pemerintah\s+Kota|Pemerintah\s+Kabupaten|Kota|Kabupaten)\s+/i, '') ||
+        'Denpasar'
+    );
+    setKopTampilkanLogoKiri(true);
+    setKopTampilkanLogoKanan(true);
+    setKopGarisTipe('double');
   };
 
   const handleSaveProfil = (e: React.FormEvent) => {
@@ -393,6 +507,21 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
           >
             <Building2 className="w-4 h-4" />
             <span>Data & Logo Sekolah</span>
+          </button>
+        )}
+
+        {/* Edit Kop Surat Sub-tab: VISIBLE FOR ADMIN ONLY */}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTool('kop')}
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              activeSubTab === 'kop'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-emerald-400" />
+            <span>Edit Kop Surat</span>
           </button>
         )}
 
@@ -640,6 +769,452 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
               <span>Simpan Data & Logo Sekolah</span>
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Sub-Tab: Edit Kop Surat Dokumen Resmi (Admin Only) */}
+      {activeSubTab === 'kop' && isAdmin && (
+        <div className="space-y-6 max-w-5xl">
+          {/* Action and Preset Bar */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                <span>Pengaturan & Desain Kop Surat Dokumen Resmi</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Kustomisasi teks instansi, nama sekolah, alamat, kontak, logo ganda, dan garis pembatas untuk seluruh cetak laporan resmi (Rekap Nilai, Rekap Presensi, Jurnal KBM).
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSyncFromSchoolData}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200"
+                title="Sinkronkan otomatis dari identitas sekolah yang telah tersimpan"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
+                <span>Muat dari Data Sekolah</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyPresetYayasan}
+                className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-purple-200"
+                title="Gunakan format kop surat untuk sekolah swasta / yayasan"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                <span>Preset Swasta / Yayasan</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Form Editor (7 cols) */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
+              <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+                <span>Formulir Teks & Format Kop</span>
+                <span className="text-[11px] font-normal text-slate-500">Format standar dinas & kementerian</span>
+              </h3>
+
+              <form onSubmit={handleSaveKopSurat} className="space-y-4">
+                {/* Baris 1 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 1: Instansi Induk / Pemerintah Daerah
+                  </label>
+                  <input
+                    type="text"
+                    value={kopBaris1}
+                    onChange={(e) => setKopBaris1(e.target.value)}
+                    placeholder="Contoh: PEMERINTAH KOTA DENPASAR"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400">Contoh: PEMERINTAH KOTA DENPASAR / PEMERINTAH PROVINSI BALI</span>
+                </div>
+
+                {/* Baris 2 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 2: Dinas Pendidikan / Badan Pengelola Yayasan
+                  </label>
+                  <input
+                    type="text"
+                    value={kopBaris2}
+                    onChange={(e) => setKopBaris2(e.target.value)}
+                    placeholder="Contoh: DINAS PENDIDIKAN KEPEMUDAAN DAN OLAHRAGA"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
+                  />
+                  <span className="text-[10px] text-slate-400">Contoh: DINAS PENDIDIKAN KEPEMUDAAN DAN OLAHRAGA</span>
+                </div>
+
+                {/* Baris 3 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 3: Nama Satuan Pendidikan (Teks Utama Besar)
+                  </label>
+                  <input
+                    type="text"
+                    value={kopBaris3}
+                    onChange={(e) => setKopBaris3(e.target.value)}
+                    placeholder="Contoh: SMP NEGERI 1 MERDEKA"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400">Tercetak dengan ukuran huruf paling tebal dan menonjol</span>
+                </div>
+
+                {/* Baris 4 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 4: Alamat Lengkap & Kode Pos
+                  </label>
+                  <input
+                    type="text"
+                    value={kopAlamat}
+                    onChange={(e) => setKopAlamat(e.target.value)}
+                    placeholder="Contoh: Jalan Pendidikan No. 45, Denpasar, Bali 80234"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+
+                {/* Baris 5 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 5: Kontak & Identitas (Telepon, Fax, NPSN, Akreditasi)
+                  </label>
+                  <input
+                    type="text"
+                    value={kopKontak}
+                    onChange={(e) => setKopKontak(e.target.value)}
+                    placeholder="Contoh: Telepon: (0361) 234567 · NPSN: 50102030 · Akreditasi A"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Baris 6 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Baris 6: Website & Email Resmi
+                  </label>
+                  <input
+                    type="text"
+                    value={kopWebsiteEmail}
+                    onChange={(e) => setKopWebsiteEmail(e.target.value)}
+                    placeholder="Contoh: Email: info@smpn1merdeka.sch.id · Website: www.smpn1merdeka.sch.id"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Kota untuk Tanda Tangan */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Kota / Wilayah Surat (Titimangsa Tanda Tangan Laporan)
+                  </label>
+                  <input
+                    type="text"
+                    value={kopKotaSurat}
+                    onChange={(e) => setKopKotaSurat(e.target.value)}
+                    placeholder="Contoh: Denpasar"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                  <span className="text-[10px] text-slate-400">
+                    Otomatis muncul pada blok tanda tangan bawah: &quot;{kopKotaSurat || 'Denpasar'}, [Tanggal Cetak]&quot;
+                  </span>
+                </div>
+
+                {/* Pengaturan Logo & Garis */}
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Pengaturan Logo & Garis Pembatas
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Logo Kiri Card */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Logo Kiri (Pemda / Yayasan)</span>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={kopTampilkanLogoKiri}
+                            onChange={(e) => setKopTampilkanLogoKiri(e.target.checked)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span>Tampilkan</span>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                          {logoKabupatenUrl ? (
+                            <img src={logoKabupatenUrl} alt="Logo Kiri" className="max-w-full max-h-full object-contain" />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-bold text-center">Belum Ada</span>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 cursor-pointer shadow-2xs">
+                            <Upload className="w-3 h-3" />
+                            <span>Unggah</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageFileRead(e, setLogoKabupatenUrl)}
+                              className="hidden"
+                            />
+                          </label>
+                          {logoKabupatenUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setLogoKabupatenUrl('')}
+                              className="block text-[10px] text-rose-600 hover:text-rose-700 font-bold cursor-pointer"
+                            >
+                              Hapus Logo
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Logo Kanan Card */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Logo Kanan (Sekolah)</span>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={kopTampilkanLogoKanan}
+                            onChange={(e) => setKopTampilkanLogoKanan(e.target.checked)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span>Tampilkan</span>
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                          {logoSekolahUrl ? (
+                            <img src={logoSekolahUrl} alt="Logo Kanan" className="max-w-full max-h-full object-contain" />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-bold text-center">Belum Ada</span>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 cursor-pointer shadow-2xs">
+                            <Upload className="w-3 h-3" />
+                            <span>Unggah</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageFileRead(e, setLogoSekolahUrl)}
+                              className="hidden"
+                            />
+                          </label>
+                          {logoSekolahUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setLogoSekolahUrl('')}
+                              className="block text-[10px] text-rose-600 hover:text-rose-700 font-bold cursor-pointer"
+                            >
+                              Hapus Logo
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gaya Garis Pembatas */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Gaya Garis Pembatas Kop Surat
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setKopGarisTipe('double')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                          kopGarisTipe === 'double'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-2xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div>Garis Ganda</div>
+                        <div className="mt-1 border-b-4 border-double border-slate-800" />
+                        <span className="text-[9px] text-slate-400 block mt-1">Standar Resmi Dinas</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setKopGarisTipe('single')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                          kopGarisTipe === 'single'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-2xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div>Garis Tunggal</div>
+                        <div className="mt-1 border-b-2 border-slate-800" />
+                        <span className="text-[9px] text-slate-400 block mt-1">Garis Tebal</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setKopGarisTipe('none')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                          kopGarisTipe === 'none'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-2xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div>Tanpa Garis</div>
+                        <div className="mt-1 border-b border-dashed border-slate-300" />
+                        <span className="text-[9px] text-slate-400 block mt-1">Polos</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Perubahan Kop Surat Resmi</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right Column: Live Real-Time WYSIWYG Print Preview (5 cols) */}
+            <div className="lg:col-span-5 space-y-3 sticky top-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-emerald-600" />
+                  <span>Pratinjau Langsung Kop Surat (Cetak A4)</span>
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Real-time Preview
+                </span>
+              </div>
+
+              {/* Paper Sheet Preview Mockup */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-300 shadow-md space-y-4">
+                {/* Official Kop Rendered */}
+                <div
+                  className={`flex items-center justify-between pb-3 gap-3 text-center ${
+                    kopGarisTipe === 'double'
+                      ? 'border-b-4 border-double border-slate-900'
+                      : kopGarisTipe === 'single'
+                      ? 'border-b-2 border-slate-900'
+                      : 'border-b border-transparent'
+                  }`}
+                >
+                  {/* Left Logo */}
+                  {kopTampilkanLogoKiri && (
+                    <div className="w-14 h-14 flex items-center justify-center shrink-0">
+                      {logoKabupatenUrl ? (
+                        <img src={logoKabupatenUrl} alt="Logo Kiri" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[8px] text-slate-400 font-bold p-1 text-center">
+                          Logo Kiri
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Header Texts */}
+                  <div className="flex-1 px-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-800 leading-tight">
+                      {kopBaris1 || 'PEMERINTAH KOTA DENPASAR'}
+                    </div>
+                    {kopBaris2 && (
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-700 leading-tight mt-0.5">
+                        {kopBaris2}
+                      </div>
+                    )}
+                    <div className="text-sm font-black uppercase text-slate-950 tracking-tight mt-0.5 leading-tight">
+                      {kopBaris3 || 'SMP NEGERI 1 MERDEKA'}
+                    </div>
+                    <div className="text-[8.5px] text-slate-700 font-medium mt-0.5 leading-tight">
+                      {kopAlamat || 'Jalan Pendidikan No. 45, Denpasar, Bali 80234'}
+                    </div>
+                    {kopKontak && (
+                      <div className="text-[8px] text-slate-600 font-medium leading-tight">
+                        {kopKontak}
+                      </div>
+                    )}
+                    {kopWebsiteEmail && (
+                      <div className="text-[7.5px] text-slate-500 font-medium leading-tight">
+                        {kopWebsiteEmail}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Logo */}
+                  {kopTampilkanLogoKanan && (
+                    <div className="w-14 h-14 flex items-center justify-center shrink-0">
+                      {logoSekolahUrl ? (
+                        <img src={logoSekolahUrl} alt="Logo Kanan" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-[8px] text-slate-400 font-bold p-1 text-center">
+                          Logo Kanan
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sample Document Title */}
+                <div className="text-center pt-1 space-y-1">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-900 underline tracking-wider">
+                    LAPORAN REKAPITULASI CAPAIAN PEMBELAJARAN
+                  </div>
+                  <div className="text-[8.5px] text-slate-500">
+                    Tahun Ajaran {sekThn} · Semester {sekSemester}
+                  </div>
+                </div>
+
+                {/* Skeleton preview lines */}
+                <div className="space-y-1.5 pt-2">
+                  <div className="h-4 bg-slate-100 rounded-md w-full border border-slate-200" />
+                  <div className="h-4 bg-slate-50 rounded-md w-full border border-slate-100" />
+                  <div className="h-4 bg-slate-50 rounded-md w-full border border-slate-100" />
+                </div>
+
+                {/* Signature Preview */}
+                <div className="pt-4 grid grid-cols-2 gap-4 text-center text-[8px] font-medium text-slate-800 border-t border-slate-100">
+                  <div>
+                    <div>Mengetahui,</div>
+                    <div className="font-bold">Kepala Sekolah</div>
+                    <div className="h-8" />
+                    <div className="font-bold underline">{sekKepsek || 'Nama Kepala Sekolah'}</div>
+                    <div className="text-[7px] text-slate-500 font-mono">NIP: {sekNipKepsek || '1975...'}</div>
+                  </div>
+                  <div>
+                    <div>{kopKotaSurat || 'Denpasar'}, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                    <div className="font-bold">Guru Pengampu</div>
+                    <div className="h-8" />
+                    <div className="font-bold underline">{profNama || 'Nama Guru'}</div>
+                    <div className="text-[7px] text-slate-500 font-mono">NIP: {profNip || '1988...'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-900 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <div>
+                  Kop surat yang Anda ubah di sini akan langsung <b>tersinkronisasi secara otomatis</b> pada seluruh dokumen di menu <b>Cetak Laporan</b>.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
