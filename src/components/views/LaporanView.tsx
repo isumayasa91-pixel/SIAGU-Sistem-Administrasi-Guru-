@@ -244,7 +244,7 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state, onChangeActiveK
                 <thead>
                   <tr className="bg-slate-100 text-[11px] font-bold text-slate-900 uppercase">
                     <th className="border border-slate-300 py-2 px-3 text-center w-10">No</th>
-                    <th className="border border-slate-300 py-2 px-3 w-28">Tanggal</th>
+                    <th className="border border-slate-300 py-2 px-3 w-32 text-center">Tanggal / Jam</th>
                     <th className="border border-slate-300 py-2 px-3">Materi Pokok / Pembahasan</th>
                     <th className="border border-slate-300 py-2 px-3">Tujuan Pembelajaran (TP)</th>
                     <th className="border border-slate-300 py-2 px-3 text-center w-28">Kehadiran</th>
@@ -255,7 +255,10 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state, onChangeActiveK
                   {jurnalInActiveKelas.map((j, idx) => (
                     <tr key={j.id} className="border-b border-slate-200">
                       <td className="border border-slate-300 py-2.5 px-3 text-center font-mono">{idx + 1}</td>
-                      <td className="border border-slate-300 py-2.5 px-3 font-mono font-bold whitespace-nowrap">{j.tanggal}</td>
+                      <td className="border border-slate-300 py-2.5 px-3 text-center font-mono">
+                        <span className="font-bold block whitespace-nowrap">{j.tanggal}</span>
+                        <span className="text-[10px] font-semibold text-slate-600 block bg-slate-100 rounded px-1 mt-0.5">{j.jamKe || 'Jam 1-2'}</span>
+                      </td>
                       <td className="border border-slate-300 py-2.5 px-3 font-bold">{j.materiPokok}</td>
                       <td className="border border-slate-300 py-2.5 px-3">{j.tujuanPembelajaran}</td>
                       <td className="border border-slate-300 py-2.5 px-3 text-center font-mono text-[11px]">

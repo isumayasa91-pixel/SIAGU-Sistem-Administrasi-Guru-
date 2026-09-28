@@ -313,6 +313,7 @@ function AppContent() {
           <JurnalView
             state={state}
             onUpdateJurnal={handleUpdateJurnal}
+            onUpdateAbsensi={handleUpdateAbsensi}
             onNavigateToReport={() => setActiveTab('laporan')}
           />
         )}

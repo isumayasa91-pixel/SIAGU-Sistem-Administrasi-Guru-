@@ -40,6 +40,18 @@ export interface SiaguState {
   activeKelasId: string;
 }
 
+function mergeStandardMapel(savedMapel?: MataPelajaran[]): MataPelajaran[] {
+  if (!savedMapel || savedMapel.length === 0) return initialMapel;
+  const existingMap = new Map(savedMapel.map((m) => [m.id.toLowerCase(), m]));
+  const result = [...savedMapel];
+  initialMapel.forEach((std) => {
+    if (!existingMap.has(std.id.toLowerCase())) {
+      result.push(std);
+    }
+  });
+  return result;
+}
+
 export function loadSiaguData(): SiaguState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -53,7 +65,7 @@ export function loadSiaguData(): SiaguState {
       pengaturanSekolah: parsed.pengaturanSekolah || initialPengaturanSekolah,
       profil: parsed.profil || initialProfilGuru,
       kelas: parsed.kelas || initialKelas,
-      mapel: parsed.mapel || initialMapel,
+      mapel: mergeStandardMapel(parsed.mapel),
       siswa: parsed.siswa || initialSiswa,
       jadwal: parsed.jadwal || initialJadwal,
       absensi: parsed.absensi || initialAbsensi,
@@ -95,7 +107,7 @@ export async function fetchServerSiaguData(): Promise<SiaguState | null> {
         pengaturanSekolah: data.pengaturanSekolah || initialPengaturanSekolah,
         profil: data.profil || initialProfilGuru,
         kelas: data.kelas || initialKelas,
-        mapel: data.mapel || initialMapel,
+        mapel: mergeStandardMapel(data.mapel),
         siswa: data.siswa || initialSiswa,
         jadwal: data.jadwal || initialJadwal,
         absensi: data.absensi || initialAbsensi,

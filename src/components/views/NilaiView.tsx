@@ -188,17 +188,12 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
               onChange={(e) => setSelectedMapel(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
             >
-              {visibleMapelList.map((m) => (
+              {state.mapel.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nama} ({m.kode})
                 </option>
               ))}
             </select>
-            {user?.role === 'guru' && (
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded border border-emerald-200">
-                Mapel Diampu
-              </span>
-            )}
           </div>
 
           <button

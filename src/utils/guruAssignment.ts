@@ -144,13 +144,20 @@ export function getVisibleMapelForKelas(
 }
 
 /**
- * Extracts a normalized subject code (e.g. 'IPA', 'MTK', 'BIN', 'BIG') from text.
+ * Extracts a normalized subject code from text for the 11 national & local curriculum subjects.
  */
 export function extractMapelCode(text: string): string {
   const upper = text.toUpperCase();
-  if (upper.includes('IPA') || upper.includes('ALAM')) return 'IPA';
-  if (upper.includes('MATEMATIKA') || upper.includes('MTK')) return 'MTK';
+  if (upper.includes('AGAMA') || upper.includes('PAI') || upper.includes('ISLAM') || upper.includes('HINDU') || upper.includes('KRISTEN') || upper.includes('BUDHA') || upper.includes('KATOLIK')) return 'PAI';
+  if (upper.includes('PANCASILA') || upper.includes('PPKN') || upper.includes('PKN') || upper.includes('KEWARGANEGARAAN')) return 'PPKN';
   if (upper.includes('INDONESIA') || upper.includes('BIN')) return 'BIN';
+  if (upper.includes('MATEMATIKA') || upper.includes('MTK') || upper.includes('MATH')) return 'MTK';
+  if (upper.includes('IPA') || upper.includes('ALAM') || upper.includes('SCIENCE') || upper.includes('BIOLOGI') || upper.includes('FISIKA')) return 'IPA';
+  if (upper.includes('IPS') || upper.includes('SOSIAL') || upper.includes('GEOGRAFI') || upper.includes('SEJARAH') || upper.includes('EKONOMI')) return 'IPS';
   if (upper.includes('INGGRIS') || upper.includes('BIG') || upper.includes('ENG')) return 'BIG';
+  if (upper.includes('BALI') || upper.includes('DAERAH') || upper.includes('MULOK')) return 'BALI';
+  if (upper.includes('SENI') || upper.includes('BUDAYA') || upper.includes('SBUD') || upper.includes('PRAKARYA') || upper.includes('MUSIK') || upper.includes('RUPA')) return 'SBUD';
+  if (upper.includes('PJOK') || upper.includes('JASMANI') || upper.includes('PENJAS') || upper.includes('OLAHRAGA')) return 'PJOK';
+  if (upper.includes('INFORMATIKA') || upper.includes('INFO') || upper.includes('TIK') || upper.includes('KOMPUTER') || upper.includes('CODING')) return 'INFO';
   return upper.trim().slice(0, 5) || 'IPA';
 }

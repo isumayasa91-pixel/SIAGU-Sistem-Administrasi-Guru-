@@ -84,6 +84,7 @@ export interface JadwalMengajar {
 export interface JurnalKBM {
   id: string;
   tanggal: string;
+  jamKe?: string; // e.g. "Jam 1-2", "Jam 3-4", "Jam 5-7"
   kelasId: string;
   mapelId: string;
   materiPokok: string;

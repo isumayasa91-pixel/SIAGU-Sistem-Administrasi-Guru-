@@ -113,10 +113,17 @@ export const initialKelas: Kelas[] = [
 ];
 
 export const initialMapel: MataPelajaran[] = [
-  { id: 'IPA', kode: 'IPA-01', nama: 'Ilmu Pengetahuan Alam', kkm: 75 },
-  { id: 'MTK', kode: 'MTK-01', nama: 'Matematika', kkm: 75 },
+  { id: 'PAI', kode: 'PAI-01', nama: 'Pendidikan Agama', kkm: 75 },
+  { id: 'PPKN', kode: 'PPKN-01', nama: 'Pendidikan Pancasila', kkm: 75 },
   { id: 'BIN', kode: 'BIN-01', nama: 'Bahasa Indonesia', kkm: 75 },
+  { id: 'MTK', kode: 'MTK-01', nama: 'Matematika', kkm: 75 },
+  { id: 'IPA', kode: 'IPA-01', nama: 'IPA (Ilmu Pengetahuan Alam)', kkm: 75 },
+  { id: 'IPS', kode: 'IPS-01', nama: 'IPS (Ilmu Pengetahuan Sosial)', kkm: 75 },
   { id: 'BIG', kode: 'BIG-01', nama: 'Bahasa Inggris', kkm: 75 },
+  { id: 'BALI', kode: 'BALI-01', nama: 'Bahasa Bali', kkm: 75 },
+  { id: 'SBUD', kode: 'SBUD-01', nama: 'Seni Budaya', kkm: 75 },
+  { id: 'PJOK', kode: 'PJOK-01', nama: 'PJOK (Pendidikan Jasmani, Olahraga, & Kesehatan)', kkm: 75 },
+  { id: 'INFO', kode: 'INFO-01', nama: 'Informatika', kkm: 75 },
 ];
 
 export const initialSiswa: Siswa[] = [
@@ -434,6 +441,7 @@ export const initialJurnal: JurnalKBM[] = [
   {
     id: 'KBM01',
     tanggal: todayStr,
+    jamKe: 'Jam 1-3',
     kelasId: '7A',
     mapelId: 'IPA',
     materiPokok: 'Pengamatan Sel Tumbuhan & Sel Hewan',
@@ -448,6 +456,7 @@ export const initialJurnal: JurnalKBM[] = [
   {
     id: 'KBM02',
     tanggal: '2025-09-22',
+    jamKe: 'Jam 3-5',
     kelasId: '8A',
     mapelId: 'IPA',
     materiPokok: 'Uji Bahan Makanan (Karbohidrat, Protein, Lemak)',

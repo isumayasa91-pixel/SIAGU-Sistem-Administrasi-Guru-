@@ -55,21 +55,13 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
     'Sabtu',
   ];
 
-  // Filter schedule strictly according to assigned classes and mapel
+  // Filter schedule strictly according to assigned classes
   const teacherJadwalAll = state.jadwal.filter((j) => {
     if (user?.role === 'admin') return true;
     if (user?.role === 'siswa') return j.kelasId === state.activeKelasId;
     
-    // Guru: only show assigned classes and mapel taught per class
-    const isClassAssigned = visibleClasses.some((k) => k.id === j.kelasId);
-    if (!isClassAssigned) return false;
-
-    const classMapel = getTeacherMapelForKelas(user, j.kelasId, state);
-    return (
-      j.mapelId.toLowerCase() === classMapel.id.toLowerCase() ||
-      j.mapelId.toLowerCase() === classMapel.kode.toLowerCase() ||
-      classMapel.nama.toLowerCase().includes(j.mapelId.toLowerCase())
-    );
+    // Guru: show schedules for assigned classes
+    return visibleClasses.some((k) => k.id === j.kelasId);
   });
 
   const filteredJadwal = teacherJadwalAll.filter((j) => j.hari === selectedHari);
@@ -387,24 +379,17 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={formMapelId}
-                    onChange={(e) => setFormMapelId(e.target.value)}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800"
-                  >
-                    {getVisibleMapelForKelas(user, formKelasId, state).map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nama} ({m.kode})
-                      </option>
-                    ))}
-                  </select>
-                  {user?.role === 'guru' && (
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-2 rounded-xl border border-emerald-200 shrink-0">
-                      Sesuai Jadwal
-                    </span>
-                  )}
-                </div>
+                <select
+                  value={formMapelId}
+                  onChange={(e) => setFormMapelId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {state.mapel.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nama} ({m.kode})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
