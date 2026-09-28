@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Send,
   Download,
+  FileDown,
   Printer,
   Award,
   Users,
@@ -20,11 +21,15 @@ import {
   BookCheck,
   Flame,
   FileSpreadsheet,
+  Table as TableIcon,
 } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { calculateNilaiSiswa, calculateAbsensiSiswa } from '../../utils/calculations';
 import { getTeacherMapelForKelas, getVisibleKelas } from '../../utils/guruAssignment';
 import { useNotification } from '../../context/NotificationContext';
+import { ModulAjarTableDocument } from '../modul/ModulAjarTableDocument';
+import { EvaluasiAsesmenTableDocument } from '../modul/EvaluasiAsesmenTableDocument';
+import { CatatanRaportTableDocument } from '../modul/CatatanRaportTableDocument';
 
 interface AiAssistantViewProps {
   state: SiaguState;
@@ -34,6 +39,7 @@ type AiToolMode = 'modul_ajar' | 'soal_hots' | 'catatan_raport';
 
 export const AiAssistantView: React.FC<AiAssistantViewProps> = ({ state }) => {
   const [activeTool, setActiveTool] = useState<AiToolMode>('modul_ajar');
+  const [viewMode, setViewMode] = useState<'table' | 'markdown'>('table');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [resultText, setResultText] = useState<string>('');
@@ -59,14 +65,16 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({ state }) => {
 
   // ==================== Form States for Modul Ajar ====================
   const [maMapel, setMaMapel] = useState<string>(activeTeacherMapel.nama);
-  const [maFase, setMaFase] = useState<string>('Fase D (Kelas 7 - 9 SMP)');
+  const [maFase, setMaFase] = useState<string>('Fase D (SMP)');
+  const [maTingkatKelas, setMaTingkatKelas] = useState<string>('Kelas 7');
   const [maTopik, setMaTopik] = useState<string>('Pengamatan Struktur Sel & Mikroskop');
   const [maModel, setMaModel] = useState<string>('Problem-Based Learning (PBL)');
   const [maAlokasi, setMaAlokasi] = useState<string>('2 x 40 menit (1 Pertemuan)');
   const [maDimensiPancasila, setMaDimensiPancasila] = useState<string[]>([
-    'Bernalar Kritis',
-    'Gotong Royong',
-    'Mandiri',
+    'Keimanan dan Ketaqwaan terhadap Tuhan YME',
+    'Penalaran Kritis',
+    'Kreativitas',
+    'Kolaborasi',
   ]);
   const [maTujuan, setMaTujuan] = useState<string>(
     'Siswa mampu menganalisis organel sel tumbuhan dan hewan serta mempresentasikan hasil preparat basah dengan teliti.'
@@ -74,6 +82,8 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({ state }) => {
 
   // ==================== Form States for Soal HOTS ====================
   const [soalMapel, setSoalMapel] = useState<string>(activeTeacherMapel.nama);
+  const [soalFase, setSoalFase] = useState<string>('Fase D (SMP)');
+  const [soalTingkatKelas, setSoalTingkatKelas] = useState<string>('Kelas 7');
   const [soalTopik, setSoalTopik] = useState<string>('Struktur Sel, Jaringan & Keanekaragaman Hayati');
   const [soalLevelKognitif, setSoalLevelKognitif] = useState<string>('Level 3 (C4 Analisis, C5 Evaluasi, C6 Kreasi)');
   const [soalModel, setSoalModel] = useState<string>('Kontekstual AKM / Literasi Numerasi');
@@ -89,11 +99,28 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({ state }) => {
     'Perlu terus mempertahankan semangat belajar dan meningkatkan ketepatan waktu dalam mengumpulkan tugas mandiri.'
   );
 
-  // Auto-sync mapel fields when selectedKelasId changes
+  // Auto-sync mapel fields and grade level when selectedKelasId changes
   useEffect(() => {
     const curMapel = getTeacherMapelForKelas(user, selectedKelasId, state);
     setMaMapel(curMapel.nama);
     setSoalMapel(curMapel.nama);
+    
+    // Auto-detect grade level from class name
+    const currentClassObj = state.kelas.find((k) => k.id === selectedKelasId);
+    if (currentClassObj) {
+      const name = currentClassObj.namaKelas.toUpperCase();
+      if (name.includes('7') || name.includes('VII')) {
+        setMaTingkatKelas('Kelas 7');
+        setSoalTingkatKelas('Kelas 7');
+      } else if (name.includes('8') || name.includes('VIII')) {
+        setMaTingkatKelas('Kelas 8');
+        setSoalTingkatKelas('Kelas 8');
+      } else if (name.includes('9') || name.includes('IX')) {
+        setMaTingkatKelas('Kelas 9');
+        setSoalTingkatKelas('Kelas 9');
+      }
+    }
+
     const studentsInClass = state.siswa.filter((s) => s.kelasId === selectedKelasId);
     if (studentsInClass.length > 0 && !studentsInClass.some((s) => s.id === raportSiswaId)) {
       setRaportSiswaId(studentsInClass[0].id);
@@ -170,15 +197,16 @@ export const AiAssistantView: React.FC<AiAssistantViewProps> = ({ state }) => {
       prompt = `Buatkan Dokumen Lengkap MODUL AJAR KURIKULUM MERDEKA dengan rincian:
 - Satuan Pendidikan: ${state.pengaturanSekolah.namaSekolah}
 - Mata Pelajaran: ${maMapel}
-- Fase / Kelas: ${maFase} · ${activeKelasObj.namaKelas}
+- Fase Kurikulum: ${maFase}
+- Tingkat Kelas: ${maTingkatKelas} (Rombel ${activeKelasObj.namaKelas})
 - Topik / Materi Pembelajaran: ${maTopik}
 - Model Pembelajaran: ${maModel}
 - Alokasi Waktu: ${maAlokasi}
-- Dimensi Profil Pelajar Pancasila: ${maDimensiPancasila.join(', ')}
+- Dimensi Profil Lulusan & Karakter: ${maDimensiPancasila.join(', ')}
 - Tujuan Pembelajaran: ${maTujuan}
 
 Sajikan modul ajar secara sistematis dengan struktur:
-1. INFORMASI UMUM (Identitas Modul, Kompetensi Awal, Profil Pelajar Pancasila, Sarana & Prasarana, Target Peserta Didik, Model Pembelajaran)
+1. INFORMASI UMUM (Identitas Modul, Kompetensi Awal, Dimensi Profil Lulusan / Karakter Siswa, Sarana & Prasarana, Target Peserta Didik, Model Pembelajaran)
 2. KOMPONEN INTI (Tujuan Pembelajaran, Pemahaman Bermakna, Pertanyaan Pemantik, Persiapan Pembelajaran)
 3. KEGIATAN PEMBELAJARAN LENGKAP (Pendahuluan [10-15 Menit], Kegiatan Inti berbasis sintaks ${maModel} secara bertahap [50-60 Menit], Penutup [10-15 Menit])
 4. ASESMEN & EVALUASI (Asesmen Diagnostik, Asesmen Formatif saat proses KBM, Asesmen Sumatif/LKPD)
@@ -187,22 +215,24 @@ Sajikan modul ajar secara sistematis dengan struktur:
 7. LAMPIRAN (Ringkasan Materi Bahan Bacaan Siswa, Glosarium, dan Daftar Pustaka).`;
     } else if (activeTool === 'soal_hots') {
       systemInstruction =
-        'Anda adalah Pengembang Asesmen Standar Nasional Kemendikbudristek. Buatkan paket soal evaluasi berkualitas tinggi dengan stimulus kasus kontekstual, tingkat kesukaran HOTS, kunci jawaban, dan rubrik penskoran.';
-      prompt = `Buatkan Paket SOAL EVALUASI & ASESMEN KURIKULUM MERDEKA:
+        'Anda adalah Pengembang Asesmen Standar Nasional Kemendikbudristek. Buatkan paket kisi-kisi dan naskah soal evaluasi berkualitas tinggi dengan stimulus kasus kontekstual, tingkat kesukaran HOTS, kunci jawaban, dan rubrik penskoran.';
+      prompt = `Buatkan Paket KISI-KISI & SOAL EVALUASI ASESMEN KURIKULUM MERDEKA:
 - Mata Pelajaran: ${soalMapel}
-- Kelas: ${activeKelasObj.namaKelas} (${maFase})
+- Fase Kurikulum: ${soalFase}
+- Tingkat Kelas: ${soalTingkatKelas} (Rombel ${activeKelasObj.namaKelas})
 - Materi / Topik: ${soalTopik}
 - Tingkat Kognitif: ${soalLevelKognitif}
 - Model Asesmen: ${soalModel}
 - Jumlah Pilihan Ganda: ${soalJumlahPilihan} butir (Opsi A, B, C, D)
 - Jumlah Uraian / Essay: ${soalJumlahEssay} butir
 
-Format penyajian harus mencakup:
-1. PETUNJUK PENGERJAAN
-2. BAGIAN I: SOAL PILIHAN GANDA (Sertakan stimulus teks/data/tabel kasus nyata, soal pemikiran tingkat tinggi, pilihan jawaban A-D)
-3. BAGIAN II: SOAL ESSAY / URAIAN HOTS (Analisis studi kasus, pemecahan masalah, atau perancangan solusi)
-4. KUNCI JAWABAN LENGKAP & PEMBAHASAN MENDALAM
-5. PEDOMAN PENSKORAN & RUBRIK PENILAIAN ANALITIK (Kriteria perolehan skor 0-100 secara transparan).`;
+Format penyajian harus mencakup secara terstruktur:
+1. MATRIKS KISI-KISI PENULISAN SOAL ASESMEN (Tabel Matriks: No, Capaian Pembelajaran, Tujuan Pembelajaran, Lingkup Materi, Indikator Soal, Level Kognitif L1/L2/L3, Bentuk Soal, Nomor Soal, Bobot)
+2. PETUNJUK PENGERJAAN SOAL
+3. BAGIAN I: SOAL PILIHAN GANDA (Sertakan stimulus kasus kontekstual, nomor urut berurutan, opsi A-D)
+4. BAGIAN II: SOAL ESSAY / URAIAN HOTS (Analisis studi kasus, pemecahan masalah kontekstual)
+5. KUNCI JAWABAN LENGKAP & PEMBAHASAN MENDALAM
+6. PEDOMAN PENSKORAN & RUBRIK PENILAIAN ANALITIK (Skor 0-100).`;
     } else if (activeTool === 'catatan_raport') {
       systemInstruction =
         'Anda adalah Wali Kelas dan Konselor Pendidikan berpengalaman. Susunlah narasi catatan raport yang bijak, menyentuh hati, memotivasi, santun, serta memberikan arah pengembangan karakter yang jelas bagi siswa dan orang tua.';
@@ -223,19 +253,47 @@ Susun 3 VARIASI OPSI CATATAN NARASI RAPORT:
 Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan belajar di rumah.`;
     }
 
+    const metaPayload = {
+      mapel: activeTool === 'modul_ajar' ? maMapel : activeTool === 'soal_hots' ? soalMapel : activeTeacherMapel.nama,
+      kelas: activeKelasObj.namaKelas,
+      topik: activeTool === 'modul_ajar' ? maTopik : activeTool === 'soal_hots' ? soalTopik : '',
+      model: maModel,
+      alokasi: maAlokasi,
+      dimensi: maDimensiPancasila,
+      tujuan: maTujuan,
+      siswaNama: selectedSiswaObj?.nama || 'Peserta Didik',
+      nilai: studentNilaiRekap ? `${studentNilaiRekap.nilaiAkhir}` : '85',
+      predikat: studentNilaiRekap ? studentNilaiRekap.predikat : 'A',
+      kehadiran: studentAbsensiRekap ? `${studentAbsensiRekap.persenHadir}%` : '100%',
+    };
+
     try {
       const res = await fetch('/api/gemini/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction }),
+        body: JSON.stringify({
+          prompt,
+          systemInstruction,
+          toolType: activeTool,
+          meta: metaPayload,
+        }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (pErr) {
+        console.warn('Could not parse JSON response:', rawText);
+        throw new Error('Respons server tidak valid. Silakan coba sesaat lagi.');
+      }
+
+      if (!res.ok && !data.text) {
         throw new Error(data.error || 'Gagal terhubung dengan server AI Gemini.');
       }
 
-      setResultText(data.text || 'Tidak ada teks yang dihasilkan.');
+      const generatedContent = data.text || 'Tidak ada teks yang dihasilkan.';
+      setResultText(generatedContent);
       notifySuccess(
         `Dokumen ${activeTool === 'modul_ajar' ? 'Modul Ajar' : activeTool === 'soal_hots' ? 'Soal HOTS' : 'Catatan Raport'} berhasil digenerate AI!`,
         'AI Gemini Berhasil'
@@ -269,6 +327,97 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     notifySuccess(`File ${filename} berhasil diunduh ke perangkat Anda!`, 'File Berhasil Disimpan');
+  };
+
+  const handleDownloadWord = () => {
+    if (!resultText) return;
+    const sekolah = state.pengaturanSekolah;
+    const currentDateStr = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const docContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>${activeTool.toUpperCase()} - ${activeKelasObj.namaKelas}</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          @page Section1 {
+            size: 595.3pt 841.9pt; /* A4 */
+            margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+            mso-header-margin: 35.4pt;
+            mso-footer-margin: 35.4pt;
+            mso-paper-source: 0;
+          }
+          div.Section1 { page: Section1; }
+          body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.35; color: #000000; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 12pt; }
+          th, td { border: 1pt solid #000000; padding: 5pt 7pt; font-size: 10pt; vertical-align: top; }
+          th { background-color: #f1f5f9; font-weight: bold; text-align: center; }
+          h1, h2, h3 { color: #0f172a; margin-top: 10pt; margin-bottom: 4pt; }
+          h1 { font-size: 13pt; text-align: center; }
+          h2 { font-size: 11.5pt; }
+          h3 { font-size: 10.5pt; }
+          pre, code { font-family: 'Courier New', monospace; font-size: 9.5pt; }
+        </style>
+      </head>
+      <body>
+        <div class="Section1">
+          <div style="text-align: center; border-bottom: 2pt solid #000000; padding-bottom: 6pt; margin-bottom: 12pt;">
+            <p style="margin: 0; font-size: 10pt; font-weight: bold; text-transform: uppercase;">PEMERINTAH KABUPATEN KEDIRI · DINAS PENDIDIKAN</p>
+            <p style="margin: 2pt 0; font-size: 14pt; font-weight: bold; text-transform: uppercase;">${sekolah.namaSekolah}</p>
+            <p style="margin: 0; font-size: 9.5pt;">${sekolah.alamatSekolah} · Telp: ${sekolah.teleponSekolah} ${sekolah.emailSekolah ? `· Email: ${sekolah.emailSekolah}` : ''}</p>
+          </div>
+          
+          <div style="white-space: pre-wrap; font-family: inherit;">
+            ${resultText.replace(/\n/g, '<br/>')}
+          </div>
+
+          <div style="margin-top: 25pt;">
+            <table style="border: none;">
+              <tr style="border: none;">
+                <td style="border: none; width: 50%; text-align: center;">
+                  Mengetahui,<br>
+                  <b>Kepala ${sekolah.namaSekolah}</b><br><br><br><br>
+                  <b><u>${sekolah.namaKepalaSekolah}</u></b><br>
+                  NIP. ${sekolah.nipKepalaSekolah}
+                </td>
+                <td style="border: none; width: 50%; text-align: center;">
+                  Kediri, ${currentDateStr}<br>
+                  <b>Guru Pengampu</b><br><br><br><br>
+                  <b><u>${user?.nama || 'Guru Pengampu'}</u></b><br>
+                  NIP. ${user?.nip || '-'}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const filename = `${activeTool}_${activeKelasObj.namaKelas}_${new Date().toISOString().split('T')[0]}.doc`;
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notifySuccess(`Dokumen Word ${filename} berhasil diunduh!`, 'File Word Tersimpan');
   };
 
   const handlePrint = () => {
@@ -449,18 +598,33 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
           {/* ================= Tool 1: Modul Ajar Form ================= */}
           {activeTool === 'modul_ajar' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Fase Kurikulum</label>
                   <select
                     value={maFase}
                     onChange={(e) => setMaFase(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
-                    <option value="Fase D (Kelas 7 - 9 SMP)">Fase D (SMP Kelas 7-9)</option>
-                    <option value="Fase E (Kelas 10 SMA/SMK)">Fase E (SMA/SMK Kelas 10)</option>
-                    <option value="Fase F (Kelas 11 - 12 SMA/SMK)">Fase F (SMA/SMK Kelas 11-12)</option>
-                    <option value="Fase C (Kelas 5 - 6 SD)">Fase C (SD Kelas 5-6)</option>
+                    <option value="Fase D (SMP Kelas 7, 8, 9)">Fase D (SMP Kelas 7, 8, 9)</option>
+                    <option value="Fase A (SD Kelas 1 - 2)">Fase A (SD Kelas 1-2)</option>
+                    <option value="Fase B (SD Kelas 3 - 4)">Fase B (SD Kelas 3-4)</option>
+                    <option value="Fase C (SD Kelas 5 - 6)">Fase C (SD Kelas 5-6)</option>
+                    <option value="Fase E (SMA/SMK Kelas 10)">Fase E (SMA/SMK Kelas 10)</option>
+                    <option value="Fase F (SMA/SMK Kelas 11 - 12)">Fase F (SMA/SMK Kelas 11-12)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tingkat Kelas</label>
+                  <select
+                    value={maTingkatKelas}
+                    onChange={(e) => setMaTingkatKelas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Kelas 7">Kelas 7 (Fase D - Awal)</option>
+                    <option value="Kelas 8">Kelas 8 (Fase D - Madya)</option>
+                    <option value="Kelas 9">Kelas 9 (Fase D - Akhir)</option>
                   </select>
                 </div>
 
@@ -471,7 +635,7 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                     value={maAlokasi}
                     onChange={(e) => setMaAlokasi(e.target.value)}
                     placeholder="e.g. 2 x 40 menit (1 Pertemuan)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-medium text-slate-800"
                   />
                 </div>
               </div>
@@ -502,19 +666,21 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                 </select>
               </div>
 
-              {/* Dimensi Profil Pelajar Pancasila Tags */}
+              {/* Dimensi Profil Lulusan / Karakter Tags */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Dimensi Profil Pelajar Pancasila (Pilih yang relevan):
+                  Dimensi Profil Lulusan & Karakter (Pilih yang Relevan):
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    'Bernalar Kritis',
-                    'Gotong Royong',
-                    'Mandiri',
-                    'Kreatif',
-                    'Beriman & Bertakwa',
-                    'Berkebinekaan Global',
+                    'Keimanan dan Ketaqwaan terhadap Tuhan YME',
+                    'Kewargaan',
+                    'Penalaran Kritis',
+                    'Kreativitas',
+                    'Kolaborasi',
+                    'Kemandirian',
+                    'Kesehatan',
+                    'Komunikasi',
                   ].map((dimensi) => {
                     const isSelected = maDimensiPancasila.includes(dimensi);
                     return (
@@ -552,6 +718,37 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
           {/* ================= Tool 2: Soal HOTS Form ================= */}
           {activeTool === 'soal_hots' && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Fase Kurikulum</label>
+                  <select
+                    value={soalFase}
+                    onChange={(e) => setSoalFase(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Fase D (SMP Kelas 7, 8, 9)">Fase D (SMP Kelas 7, 8, 9)</option>
+                    <option value="Fase A (SD Kelas 1 - 2)">Fase A (SD Kelas 1-2)</option>
+                    <option value="Fase B (SD Kelas 3 - 4)">Fase B (SD Kelas 3-4)</option>
+                    <option value="Fase C (SD Kelas 5 - 6)">Fase C (SD Kelas 5-6)</option>
+                    <option value="Fase E (SMA/SMK Kelas 10)">Fase E (SMA/SMK Kelas 10)</option>
+                    <option value="Fase F (SMA/SMK Kelas 11 - 12)">Fase F (SMA/SMK Kelas 11-12)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tingkat Kelas</label>
+                  <select
+                    value={soalTingkatKelas}
+                    onChange={(e) => setSoalTingkatKelas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Kelas 7">Kelas 7 (Fase D - Awal)</option>
+                    <option value="Kelas 8">Kelas 8 (Fase D - Madya)</option>
+                    <option value="Kelas 9">Kelas 9 (Fase D - Akhir)</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Topik / Lingkup Materi</label>
                 <input
@@ -617,9 +814,16 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                 </div>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-xs text-amber-900 font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Otomatis menyertakan Kunci Jawaban Lengkap, Pembahasan, dan Rubrik Penskoran Skor 0-100.</span>
+              <div className="space-y-2">
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200/80 text-xs text-emerald-950 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Otomatis menyusun Matriks Kisi-Kisi Penulisan Soal (CP, TP, Indikator, Level Kognitif).</span>
+                </div>
+
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-xs text-amber-900 font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Otomatis menyertakan Kunci Jawaban Lengkap, Pembahasan Ilmiah, dan Rubrik Penskoran Skor 0-100.</span>
+                </div>
               </div>
             </div>
           )}
@@ -747,7 +951,34 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
               </div>
 
               {resultText && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        viewMode === 'table'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <TableIcon className="w-3.5 h-3.5" />
+                      <span>Format Tabel Resmi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('markdown')}
+                      className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        viewMode === 'markdown'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Teks Asli</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={handleCopyText}
                     className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -766,6 +997,15 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                   </button>
 
                   <button
+                    onClick={handleDownloadWord}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    title="Unduh Dokumen Microsoft Word (.doc)"
+                  >
+                    <FileDown className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Unduh Word (.DOC)</span>
+                  </button>
+
+                  <button
                     onClick={handleDownloadFile}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                     title="Unduh Berkas Markdown (.md)"
@@ -777,10 +1017,10 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                   <button
                     onClick={handlePrint}
                     className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    title="Cetak Dokumen"
+                    title="Cetak Langsung atau Simpan sebagai PDF"
                   >
                     <Printer className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Cetak</span>
+                    <span>Cetak / PDF</span>
                   </button>
                 </div>
               )}
@@ -805,16 +1045,64 @@ Berikan juga 1 Catatan Khusus untuk Orang Tua/Wali Siswa untuk pendampingan bela
                     AI Gemini sedang menyusun dokumen Kurikulum Merdeka...
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                    Menganalisis sintaks pembelajaran, capaian kompetensi, dan format terstandarisasi Kemendikbudristek.
+                    Menyusun data terstruktur, format tabel matriks, dan dokumen terstandarisasi Kemendikbudristek.
                   </p>
                 </div>
               </div>
             ) : resultText ? (
-              <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 max-h-[600px] overflow-y-auto print:max-h-none print:border-none print:bg-transparent">
-                <div className="text-xs leading-relaxed text-slate-800 space-y-3 whitespace-pre-line font-sans font-medium">
-                  {resultText}
+              activeTool === 'modul_ajar' && viewMode === 'table' ? (
+                <div className="overflow-x-auto max-h-[700px] overflow-y-auto print:max-h-none print:overflow-visible">
+                  <ModulAjarTableDocument
+                    state={state}
+                    mapel={maMapel}
+                    fase={maFase}
+                    kelas={`${maTingkatKelas} (${activeKelasObj.namaKelas})`}
+                    topik={maTopik}
+                    model={maModel}
+                    alokasi={maAlokasi}
+                    dimensiList={maDimensiPancasila}
+                    tujuan={maTujuan}
+                    generatedText={resultText}
+                    onPrint={handlePrint}
+                  />
                 </div>
-              </div>
+              ) : activeTool === 'soal_hots' && viewMode === 'table' ? (
+                <div className="overflow-x-auto max-h-[700px] overflow-y-auto print:max-h-none print:overflow-visible">
+                  <EvaluasiAsesmenTableDocument
+                    state={state}
+                    mapel={soalMapel}
+                    kelas={`${soalTingkatKelas} (${activeKelasObj.namaKelas})`}
+                    fase={soalFase}
+                    topik={soalTopik}
+                    levelKognitif={soalLevelKognitif}
+                    modelAsesmen={soalModel}
+                    jumlahPilihan={soalJumlahPilihan}
+                    jumlahEssay={soalJumlahEssay}
+                    generatedText={resultText}
+                    onPrint={handlePrint}
+                  />
+                </div>
+              ) : activeTool === 'catatan_raport' && viewMode === 'table' ? (
+                <div className="overflow-x-auto max-h-[700px] overflow-y-auto print:max-h-none print:overflow-visible">
+                  <CatatanRaportTableDocument
+                    state={state}
+                    siswa={selectedSiswaObj}
+                    kelas={activeKelasObj.namaKelas}
+                    nilaiRekap={studentNilaiRekap}
+                    absensiRekap={studentAbsensiRekap}
+                    kelebihan={raportKelebihan}
+                    perbaikan={raportPerbaikan}
+                    generatedText={resultText}
+                    onPrint={handlePrint}
+                  />
+                </div>
+              ) : (
+                <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 max-h-[600px] overflow-y-auto print:max-h-none print:border-none print:bg-transparent">
+                  <div className="text-xs leading-relaxed text-slate-800 space-y-3 whitespace-pre-line font-sans font-medium">
+                    {resultText}
+                  </div>
+                </div>
+              )
             ) : (
               <div className="py-20 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3">
