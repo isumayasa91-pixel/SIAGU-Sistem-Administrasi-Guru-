@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QrCode, X, CheckCircle2, User, Sparkles } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { AbsensiRecord } from '../../types/siagu';
+import { useNotification } from '../../context/NotificationContext';
 
 interface QrScannerModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 }) => {
   const [lastScannedSiswa, setLastScannedSiswa] = useState<string | null>(null);
   const [nisnInput, setNisnInput] = useState<string>('');
+  const { notifySuccess, notifyError } = useNotification();
 
   if (!isOpen) return null;
 
@@ -59,6 +61,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
     onUpdateAbsensi([...otherRecords, newRecord]);
     setLastScannedSiswa(namaSiswa);
+    notifySuccess(`Presensi QR untuk ${namaSiswa} berhasil dicatat & disimpan!`, 'Presensi QR Disimpan');
 
     setTimeout(() => setLastScannedSiswa(null), 3000);
   };
@@ -72,7 +75,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
       handleScanSiswa(found.id, found.nama);
       setNisnInput('');
     } else {
-      alert('Siswa dengan NIS/NISN tersebut tidak ditemukan di kelas ini.');
+      notifyError('Siswa dengan NIS/NISN tersebut tidak ditemukan di kelas ini.', 'Siswa Tidak Ditemukan');
     }
   };
 

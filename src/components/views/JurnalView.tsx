@@ -8,9 +8,12 @@ import {
   Edit,
   Users,
   Printer,
+  BookOpen,
 } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { JurnalKBM } from '../../types/siagu';
+import { useNotification } from '../../context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleKelas, getVisibleMapelForKelas } from '../../utils/guruAssignment';
 
 interface JurnalViewProps {
   state: SiaguState;
@@ -25,28 +28,45 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingJurnalId, setEditingJurnalId] = useState<string | null>(null);
+  const { notifySuccess } = useNotification();
+  const user = state.currentUser;
+  const visibleClasses = getVisibleKelas(user, state);
+
+  const activeKelas =
+    visibleClasses.find((k) => k.id === state.activeKelasId) ||
+    state.kelas.find((k) => k.id === state.activeKelasId) ||
+    visibleClasses[0] ||
+    state.kelas[0];
+
+  const teacherMapel = getTeacherMapelForKelas(user, activeKelas.id, state);
 
   const [formTanggal, setFormTanggal] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [formKelasId, setFormKelasId] = useState<string>(state.activeKelasId);
-  const [formMapelId, setFormMapelId] = useState<string>('IPA');
+  const [formKelasId, setFormKelasId] = useState<string>(activeKelas.id);
+  const [formMapelId, setFormMapelId] = useState<string>(teacherMapel.id);
   const [formMateri, setFormMateri] = useState<string>('');
   const [formTP, setFormTP] = useState<string>('');
   const [formKegiatan, setFormKegiatan] = useState<string>('');
   const [formCatatan, setFormCatatan] = useState<string>('');
 
-  const activeKelas =
-    state.kelas.find((k) => k.id === state.activeKelasId) || state.kelas[0];
-  const jurnalInActiveKelas = state.jurnal.filter(
-    (j) => j.kelasId === state.activeKelasId
-  );
+  // Filter journal records for active class and teacher's subject
+  const jurnalInActiveKelas = state.jurnal.filter((j) => {
+    if (j.kelasId !== activeKelas.id) return false;
+    if (user?.role === 'admin') return true;
+    return (
+      j.mapelId.toLowerCase() === teacherMapel.id.toLowerCase() ||
+      j.mapelId.toLowerCase() === teacherMapel.kode.toLowerCase() ||
+      teacherMapel.nama.toLowerCase().includes(j.mapelId.toLowerCase())
+    );
+  });
 
   const handleOpenAddModal = () => {
+    const curMapel = getTeacherMapelForKelas(user, activeKelas.id, state);
     setEditingJurnalId(null);
     setFormTanggal(new Date().toISOString().split('T')[0]);
-    setFormKelasId(state.activeKelasId);
-    setFormMapelId('IPA');
+    setFormKelasId(activeKelas.id);
+    setFormMapelId(curMapel.id);
     setFormMateri('');
     setFormTP('');
     setFormKegiatan('');
@@ -64,6 +84,12 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
     setFormKegiatan(j.kegiatanPembelajaran);
     setFormCatatan(j.catatanKejadian);
     setIsModalOpen(true);
+  };
+
+  const handleChangeFormKelas = (newKelasId: string) => {
+    setFormKelasId(newKelasId);
+    const assignedMapel = getTeacherMapelForKelas(user, newKelasId, state);
+    setFormMapelId(assignedMapel.id);
   };
 
   const handleSaveJurnal = (e: React.FormEvent) => {
@@ -100,6 +126,7 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
         return j;
       });
       onUpdateJurnal(updatedList);
+      notifySuccess('Perubahan Jurnal KBM berhasil disimpan!', 'Jurnal Berhasil Disimpan');
     } else {
       const newJurnal: JurnalKBM = {
         id: `KBM_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -116,6 +143,7 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
         catatanKejadian: formCatatan,
       };
       onUpdateJurnal([newJurnal, ...state.jurnal]);
+      notifySuccess('Agenda Jurnal KBM baru berhasil disimpan!', 'Jurnal Berhasil Disimpan');
     }
 
     setIsModalOpen(false);
@@ -124,6 +152,7 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
   const handleDeleteJurnal = (id: string) => {
     if (confirm('Hapus entri jurnal mengajar ini?')) {
       onUpdateJurnal(state.jurnal.filter((j) => j.id !== id));
+      notifySuccess('Entri Jurnal KBM berhasil dihapus.', 'Jurnal Dihapus');
     }
   };
 
@@ -141,9 +170,14 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
       {/* Header */}
       <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
             <BookOpenCheck className="w-5 h-5 text-emerald-600" />
             <span>Jurnal Mengajar KBM · {activeKelas.namaKelas}</span>
+            {user?.role === 'guru' && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+                Mapel: {teacherMapel.nama} ({teacherMapel.kode})
+              </span>
+            )}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Catatan harian keterlaksanaan pembelajaran, materi pokok, serta kejadian khusus di kelas.
@@ -276,18 +310,40 @@ export const JurnalView: React.FC<JurnalViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelas Target</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelas Target (Diampu)</label>
                   <select
                     value={formKelasId}
-                    onChange={(e) => setFormKelasId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                    onChange={(e) => handleChangeFormKelas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
                   >
-                    {state.kelas.map((k) => (
+                    {visibleClasses.map((k) => (
                       <option key={k.id} value={k.id}>
                         {k.namaKelas}
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={formMapelId}
+                    onChange={(e) => setFormMapelId(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800"
+                  >
+                    {getVisibleMapelForKelas(user, formKelasId, state).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nama} ({m.kode})
+                      </option>
+                    ))}
+                  </select>
+                  {user?.role === 'guru' && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-2 rounded-xl border border-emerald-200 shrink-0">
+                      Sesuai Jadwal
+                    </span>
+                  )}
                 </div>
               </div>
 

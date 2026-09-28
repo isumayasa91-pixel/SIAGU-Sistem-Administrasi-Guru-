@@ -6,9 +6,12 @@ import {
   Building2,
   Trash2,
   Edit,
+  BookOpen,
 } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { JadwalMengajar } from '../../types/siagu';
+import { useNotification } from '../../context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleKelas, getVisibleMapelForKelas } from '../../utils/guruAssignment';
 
 interface JadwalViewProps {
   state: SiaguState;
@@ -18,17 +21,28 @@ interface JadwalViewProps {
 export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal }) => {
   const [selectedHari, setSelectedHari] = useState<JadwalMengajar['hari']>('Senin');
 
-  const isSiswa = state.currentUser?.role === 'siswa';
+  const user = state.currentUser;
+  const isSiswa = user?.role === 'siswa';
+  const visibleClasses = getVisibleKelas(user, state);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingJadwalId, setEditingJadwalId] = useState<string | null>(null);
+  const { notifySuccess } = useNotification();
+
+  const activeKelas =
+    visibleClasses.find((k) => k.id === state.activeKelasId) ||
+    state.kelas.find((k) => k.id === state.activeKelasId) ||
+    visibleClasses[0] ||
+    state.kelas[0];
+
+  const teacherMapel = getTeacherMapelForKelas(user, activeKelas.id, state);
 
   const [formHari, setFormHari] = useState<JadwalMengajar['hari']>('Senin');
   const [formJamKe, setFormJamKe] = useState<number>(1);
   const [formJamMulai, setFormJamMulai] = useState<string>('07:30');
   const [formJamSelesai, setFormJamSelesai] = useState<string>('09:00');
-  const [formKelasId, setFormKelasId] = useState<string>(state.activeKelasId);
-  const [formMapelId, setFormMapelId] = useState<string>('IPA');
+  const [formKelasId, setFormKelasId] = useState<string>(activeKelas.id);
+  const [formMapelId, setFormMapelId] = useState<string>(teacherMapel.id);
   const [formRuangan, setFormRuangan] = useState<string>('R. Lab IPA 1');
   const [formTopik, setFormTopik] = useState<string>('');
 
@@ -41,17 +55,41 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
     'Sabtu',
   ];
 
-  const filteredJadwal = state.jadwal.filter((j) => j.hari === selectedHari);
+  // Filter schedule strictly according to assigned classes and mapel
+  const teacherJadwalAll = state.jadwal.filter((j) => {
+    if (user?.role === 'admin') return true;
+    if (user?.role === 'siswa') return j.kelasId === state.activeKelasId;
+    
+    // Guru: only show assigned classes and mapel taught per class
+    const isClassAssigned = visibleClasses.some((k) => k.id === j.kelasId);
+    if (!isClassAssigned) return false;
+
+    const classMapel = getTeacherMapelForKelas(user, j.kelasId, state);
+    return (
+      j.mapelId.toLowerCase() === classMapel.id.toLowerCase() ||
+      j.mapelId.toLowerCase() === classMapel.kode.toLowerCase() ||
+      classMapel.nama.toLowerCase().includes(j.mapelId.toLowerCase())
+    );
+  });
+
+  const filteredJadwal = teacherJadwalAll.filter((j) => j.hari === selectedHari);
+
+  const handleChangeFormKelas = (newKelasId: string) => {
+    setFormKelasId(newKelasId);
+    const assignedMapel = getTeacherMapelForKelas(user, newKelasId, state);
+    setFormMapelId(assignedMapel.id);
+  };
 
   const handleOpenAddModal = () => {
     if (isSiswa) return;
+    const curMapel = getTeacherMapelForKelas(user, activeKelas.id, state);
     setEditingJadwalId(null);
     setFormHari(selectedHari);
     setFormJamKe(1);
     setFormJamMulai('07:30');
     setFormJamSelesai('09:00');
-    setFormKelasId(state.activeKelasId);
-    setFormMapelId('IPA');
+    setFormKelasId(activeKelas.id);
+    setFormMapelId(curMapel.id);
     setFormRuangan('R. Lab IPA 1');
     setFormTopik('');
     setIsModalOpen(true);
@@ -93,6 +131,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
         return j;
       });
       onUpdateJadwal(updatedList);
+      notifySuccess(`Perubahan jadwal ${formHari} jam ke-${formJamKe} berhasil disimpan!`, 'Jadwal Berhasil Disimpan');
     } else {
       const newRecord: JadwalMengajar = {
         id: `J_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -106,6 +145,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
         topikRencana: formTopik,
       };
       onUpdateJadwal([...state.jadwal, newRecord]);
+      notifySuccess(`Jadwal mengajar baru ${formHari} jam ke-${formJamKe} berhasil disimpan!`, 'Jadwal Berhasil Disimpan');
     }
 
     setIsModalOpen(false);
@@ -115,6 +155,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
     if (isSiswa) return;
     if (confirm('Hapus sesi jadwal mengajar ini?')) {
       onUpdateJadwal(state.jadwal.filter((j) => j.id !== id));
+      notifySuccess('Sesi jadwal mengajar berhasil dihapus.', 'Jadwal Dihapus');
     }
   };
 
@@ -148,7 +189,7 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
       <div className="flex items-center gap-1 bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs overflow-x-auto">
         {hariList.map((hari) => {
           const isActive = selectedHari === hari;
-          const count = state.jadwal.filter((j) => j.hari === hari).length;
+          const count = teacherJadwalAll.filter((j) => j.hari === hari).length;
           return (
             <button
               key={hari}
@@ -317,13 +358,13 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelas Target</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelas Target (Diampu)</label>
                   <select
                     value={formKelasId}
-                    onChange={(e) => setFormKelasId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                    onChange={(e) => handleChangeFormKelas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
                   >
-                    {state.kelas.map((k) => (
+                    {visibleClasses.map((k) => (
                       <option key={k.id} value={k.id}>
                         {k.namaKelas}
                       </option>
@@ -341,6 +382,28 @@ export const JadwalView: React.FC<JadwalViewProps> = ({ state, onUpdateJadwal })
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
                     required
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={formMapelId}
+                    onChange={(e) => setFormMapelId(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800"
+                  >
+                    {getVisibleMapelForKelas(user, formKelasId, state).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nama} ({m.kode})
+                      </option>
+                    ))}
+                  </select>
+                  {user?.role === 'guru' && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-2 rounded-xl border border-emerald-200 shrink-0">
+                      Sesuai Jadwal
+                    </span>
+                  )}
                 </div>
               </div>
 

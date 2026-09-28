@@ -33,11 +33,14 @@ import { AiAssistantView } from './components/views/AiAssistantView';
 import { LaporanView } from './components/views/LaporanView';
 import { QrScannerModal } from './components/modals/QrScannerModal';
 import { LoginView } from './components/auth/LoginView';
+import { NotificationProvider, useNotification } from './context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleKelas } from './utils/guruAssignment';
 
-export default function App() {
+function AppContent() {
   const [state, setState] = useState<SiaguState>(() => loadSiaguData());
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
+  const { notifySuccess, notifySaved, notifyInfo } = useNotification();
 
   // Fetch initial central database state on mount for cross-device sync
   useEffect(() => {
@@ -56,6 +59,18 @@ export default function App() {
     saveSiaguData(state);
   }, [state]);
 
+  // If user is logged in, validate and ensure activeKelasId is within visible/assigned classes
+  useEffect(() => {
+    if (!state.currentUser) return;
+    const visibleClasses = getVisibleKelas(state.currentUser, state);
+    if (visibleClasses.length > 0) {
+      const isCurrentValid = visibleClasses.some((k) => k.id === state.activeKelasId);
+      if (!isCurrentValid) {
+        setState((prev) => ({ ...prev, activeKelasId: visibleClasses[0].id }));
+      }
+    }
+  }, [state.currentUser, state.kelas]);
+
   // If user is logged in as Siswa, restrict activeTab to allowed student views
   useEffect(() => {
     if (state.currentUser?.role === 'siswa') {
@@ -72,8 +87,40 @@ export default function App() {
       if (s) {
         targetKelasId = s.kelasId;
       }
+    } else if (user.role === 'guru') {
+      // Teachers only see their assigned classes (kelas yang diampu)
+      const visibleClasses = getVisibleKelas(user, state);
+      if (visibleClasses.length > 0) {
+        const isCurrentValid = visibleClasses.some((k) => k.id === targetKelasId);
+        if (!isCurrentValid) {
+          targetKelasId = visibleClasses[0].id;
+        }
+      }
     }
-    setState((prev) => ({ ...prev, currentUser: user, activeKelasId: targetKelasId }));
+
+    const assignedMapel = getTeacherMapelForKelas(user, targetKelasId, state);
+
+    setState((prev) => ({
+      ...prev,
+      currentUser: user,
+      activeKelasId: targetKelasId,
+      profil: {
+        ...prev.profil,
+        mataPelajaranUtama: assignedMapel.nama,
+      },
+    }));
+
+    if (user.role === 'guru') {
+      const visibleClasses = getVisibleKelas(user, state);
+      const classNames = visibleClasses.map((k) => k.namaKelas).join(', ');
+      notifySuccess(
+        `Login berhasil! Kelas yang diampu: ${classNames || targetKelasId} (Mapel: ${assignedMapel.nama})`,
+        `Selamat Datang, ${user.nama}!`
+      );
+    } else {
+      notifySuccess(`Selamat datang kembali, ${user.nama}!`, 'Login Berhasil');
+    }
+
     if (user.role === 'siswa') {
       setActiveTab('nilai');
     } else {
@@ -83,10 +130,20 @@ export default function App() {
 
   const handleLogout = () => {
     setState((prev) => ({ ...prev, currentUser: null }));
+    notifyInfo('Sesi akun Anda telah berhasil ditutup.', 'Berhasil Logout');
   };
 
   const handleChangeActiveKelas = (kelasId: string) => {
-    setState((prev) => ({ ...prev, activeKelasId: kelasId }));
+    const teacherMapel = getTeacherMapelForKelas(state.currentUser, kelasId, state);
+    setState((prev) => ({
+      ...prev,
+      activeKelasId: kelasId,
+      profil: {
+        ...prev.profil,
+        mataPelajaranUtama: teacherMapel.nama,
+      },
+    }));
+    notifyInfo(`Beralih ke Kelas ${kelasId} · Mapel: ${teacherMapel.nama} (${teacherMapel.kode})`, 'Kelas Aktif');
   };
 
   const handleChangeSemester = (semester: 'Ganjil' | 'Genap') => {
@@ -95,81 +152,100 @@ export default function App() {
       pengaturanSekolah: { ...prev.pengaturanSekolah, semester },
       profil: { ...prev.profil, semester },
     }));
+    notifySuccess(`Semester berhasil diubah ke ${semester} dan disimpan.`, 'Pengaturan Disimpan');
   };
 
   const handleUpdateAbsensi = (updatedRecords: AbsensiRecord[]) => {
     setState((prev) => ({ ...prev, absensi: updatedRecords }));
+    notifySaved('Data Presensi', 'Rekaman absensi siswa berhasil disimpan ke sistem.');
   };
 
   const handleUpdateNilai = (updatedRecords: NilaiRecord[]) => {
     setState((prev) => ({ ...prev, nilai: updatedRecords }));
+    notifySaved('Data Nilai', 'Data capaian nilai siswa berhasil disimpan.');
   };
 
   const handleUpdateJadwal = (updatedRecords: JadwalMengajar[]) => {
     setState((prev) => ({ ...prev, jadwal: updatedRecords }));
+    notifySaved('Jadwal Pelajaran', 'Jadwal mengajar berhasil disimpan.');
   };
 
   const handleUpdateJurnal = (updatedRecords: JurnalKBM[]) => {
     setState((prev) => ({ ...prev, jurnal: updatedRecords }));
+    notifySaved('Jurnal KBM', 'Agenda kegiatan belajar mengajar berhasil disimpan.');
   };
 
   const handleUpdateSiswa = (updatedList: Siswa[]) => {
     setState((prev) => ({ ...prev, siswa: updatedList }));
+    notifySaved('Data Siswa', 'Data master siswa berhasil disimpan.');
   };
 
   const handleUpdateKelas = (updatedKelas: Kelas[]) => {
     setState((prev) => ({ ...prev, kelas: updatedKelas }));
+    notifySaved('Data Kelas', 'Data rombel/kelas berhasil disimpan.');
   };
 
   const handleUpdatePengaturanSekolah = (updated: PengaturanSekolah) => {
     setState((prev) => ({ ...prev, pengaturanSekolah: updated }));
+    notifySaved('Pengaturan Sekolah', 'Data sekolah dan logo berhasil disimpan.');
   };
 
   const handleUpdateProfilGuru = (updated: ProfilGuru) => {
     setState((prev) => ({ ...prev, profil: updated }));
+    notifySaved('Profil Pengguna', 'Data profil & foto berhasil diperbarui.');
   };
 
   const handleUpdateAccounts = (updatedAccounts: UserAccount[]) => {
     setState((prev) => ({ ...prev, accounts: updatedAccounts }));
+    notifySaved('Akun Pengguna', 'Data akun login berhasil diperbarui.');
   };
 
   const handleClearAbsensi = () => {
     setState((prev) => ({ ...prev, absensi: [] }));
+    notifySuccess('Seluruh data presensi telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleClearNilai = () => {
     setState((prev) => ({ ...prev, nilai: [] }));
+    notifySuccess('Seluruh data nilai telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleClearJadwal = () => {
     setState((prev) => ({ ...prev, jadwal: [] }));
+    notifySuccess('Seluruh data jadwal telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleClearJurnal = () => {
     setState((prev) => ({ ...prev, jurnal: [] }));
+    notifySuccess('Seluruh data jurnal KBM telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleClearSiswa = () => {
     setState((prev) => ({ ...prev, siswa: [] }));
+    notifySuccess('Seluruh data siswa telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleClearKelas = () => {
     setState((prev) => ({ ...prev, kelas: [] }));
+    notifySuccess('Seluruh data kelas telah berhasil dikosongkan.', 'Data Dihapus');
   };
 
   const handleExportBackup = () => {
     exportSiaguBackupJSON(state);
+    notifySuccess('File cadangan data (backup .json) berhasil diunduh ke komputer Anda.', 'File Berhasil Disimpan');
   };
 
   const handleImportBackup = (importedState: SiaguState) => {
     setState(importedState);
     saveSiaguData(importedState);
+    notifySuccess('File cadangan berhasil diimpor & seluruh data tersimpan ke sistem!', 'Data Berhasil Dipulihkan');
   };
 
   const handleResetDefault = () => {
     if (confirm('Apakah Anda yakin ingin mengembalikan data ke sampel bawaan awal?')) {
       const defaultState = getFactoryDefaultData();
       setState(defaultState);
+      notifySuccess('Seluruh database telah dikembalikan ke sampel data bawaan pabrik.', 'Reset Berhasil');
     }
   };
 
@@ -253,6 +329,7 @@ export default function App() {
             state={state}
             onUpdateKelas={handleUpdateKelas}
             onUpdateSiswa={handleUpdateSiswa}
+            onChangeActiveKelas={handleChangeActiveKelas}
           />
         )}
 
@@ -279,7 +356,10 @@ export default function App() {
         )}
 
         {activeTab === 'laporan' && (
-          <LaporanView state={state} />
+          <LaporanView
+            state={state}
+            onChangeActiveKelas={handleChangeActiveKelas}
+          />
         )}
       </main>
 
@@ -306,3 +386,12 @@ export default function App() {
     </div>
   );
 }
+
+export default function App() {
+  return (
+    <NotificationProvider>
+      <AppContent />
+    </NotificationProvider>
+  );
+}
+

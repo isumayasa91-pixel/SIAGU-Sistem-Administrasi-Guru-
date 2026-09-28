@@ -8,8 +8,11 @@ import {
   LogOut,
   ShieldCheck,
   UserCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import { SiaguState } from '../utils/storage';
+import { useNotification } from '../context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleKelas } from '../utils/guruAssignment';
 
 interface HeaderProps {
   state: SiaguState;
@@ -32,6 +35,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const user = state.currentUser;
+  const { notifySuccess, notifyError, lastSavedAt } = useNotification();
+
+  const visibleKelas = getVisibleKelas(user, state);
+  const activeMapelObj = getTeacherMapelForKelas(user, state.activeKelasId, state);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,12 +50,15 @@ export const Header: React.FC<HeaderProps> = ({
         const parsed = JSON.parse(event.target?.result as string);
         if (parsed && parsed.siswa && parsed.kelas) {
           onImportBackup(parsed);
-          alert('Data SIAGU berhasil diimpor!');
+          notifySuccess(
+            `File cadangan (${file.name}) berhasil diimpor & seluruh data tersimpan ke sistem!`,
+            'File Berhasil Disimpan'
+          );
         } else {
-          alert('File JSON tidak valid untuk format SIAGU.');
+          notifyError('File JSON tidak valid untuk format data SIAGU.', 'Gagal Membaca File');
         }
       } catch (err) {
-        alert('Gagal membaca file JSON backup.');
+        notifyError('Gagal memproses file JSON cadangan.', 'Kesalahan File');
       }
     };
     reader.readAsText(file);
@@ -89,31 +99,55 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Zone 2: Global Context Selectors (Class & Semester) */}
-          <div className="hidden md:flex items-center gap-3 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200/70">
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 px-2 font-medium">
-              <Building2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Kelas:</span>
+          <div className="hidden md:flex items-center gap-2.5 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200/80">
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 px-1.5 font-bold">
+              <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{user?.role === 'guru' ? 'Kelas Diampu:' : 'Kelas:'}</span>
             </div>
             <div className="flex items-center gap-1">
-              {state.kelas.map((k) => {
+              {visibleKelas.map((k) => {
                 const isActive = k.id === state.activeKelasId;
+                const kMapel = getTeacherMapelForKelas(user, k.id, state);
                 return (
                   <button
                     key={k.id}
                     onClick={() => onChangeActiveKelas(k.id)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                       isActive
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-white hover:text-slate-900'
+                        : 'text-slate-700 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200'
                     }`}
+                    title={`Beralih ke ${k.namaKelas} · Mata Pelajaran: ${kMapel.nama}`}
                   >
-                    {k.namaKelas}
+                    <span>{k.namaKelas}</span>
+                    {user?.role === 'guru' && (
+                      <span
+                        className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                          isActive
+                            ? 'bg-emerald-800 text-emerald-100'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {kMapel.kode || kMapel.id}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            <div className="h-4 w-px bg-slate-300 mx-1" />
+            {/* Subject Indicator Badge for Guru */}
+            {user?.role === 'guru' && (
+              <div
+                className="hidden xl:flex items-center gap-1.5 px-2 py-0.5 bg-white rounded-lg border border-emerald-200 text-[11px] font-bold text-slate-800 shadow-2xs"
+                title={`Mata Pelajaran Kelas ${state.activeKelasId}: ${activeMapelObj.nama} (KKM: ${activeMapelObj.kkm})`}
+              >
+                <span className="text-[10px] text-slate-400 font-semibold">Mapel:</span>
+                <span className="text-emerald-700">{activeMapelObj.nama}</span>
+              </div>
+            )}
+
+            <div className="h-4 w-px bg-slate-300 mx-0.5" />
 
             <div className="flex items-center gap-1 text-xs text-slate-600">
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -143,6 +177,17 @@ export const Header: React.FC<HeaderProps> = ({
               accept=".json"
               className="hidden"
             />
+
+            {/* Live Save Status Badge */}
+            {lastSavedAt && (
+              <div
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-bold shadow-2xs"
+                title={`Seluruh data aman. Terakhir disimpan: ${lastSavedAt.toLocaleTimeString('id-ID')}`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Tersimpan</span>
+              </div>
+            )}
 
             {/* Export/Import Utilities */}
             <div className="hidden lg:flex items-center gap-1">
@@ -217,6 +262,39 @@ export const Header: React.FC<HeaderProps> = ({
 
           </div>
 
+        </div>
+
+        {/* Mobile Sub-strip: Assigned Classes & Active Mapel */}
+        <div className="md:hidden pt-2 pb-1 border-t border-slate-100 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">
+              {user?.role === 'guru' ? 'Diampu:' : 'Kelas:'}
+            </span>
+            {visibleKelas.map((k) => {
+              const isActive = k.id === state.activeKelasId;
+              const kMapel = getTeacherMapelForKelas(user, k.id, state);
+              return (
+                <button
+                  key={k.id}
+                  onClick={() => onChangeActiveKelas(k.id)}
+                  className={`px-2 py-0.5 text-xs font-bold rounded-md ${
+                    isActive
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {k.namaKelas}
+                  {user?.role === 'guru' && ` (${kMapel.kode || kMapel.id})`}
+                </button>
+              );
+            })}
+          </div>
+
+          {user?.role === 'guru' && (
+            <div className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0 truncate max-w-[140px]">
+              Mapel: {activeMapelObj.nama}
+            </div>
+          )}
         </div>
       </div>
     </header>

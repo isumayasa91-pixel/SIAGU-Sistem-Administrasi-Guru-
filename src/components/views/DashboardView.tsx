@@ -15,6 +15,7 @@ import {
 import { SiaguState } from '../../utils/storage';
 import { ActiveTab } from '../../types/siagu';
 import { calculateNilaiSiswa } from '../../utils/calculations';
+import { getTeacherMapelForKelas, getVisibleKelas } from '../../utils/guruAssignment';
 
 interface DashboardViewProps {
   state: SiaguState;
@@ -27,22 +28,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   onOpenQrScanner,
 }) => {
-  const activeKelas = state.kelas.find((k) => k.id === state.activeKelasId) || state.kelas[0];
-  const siswaInActiveKelas = state.siswa.filter((s) => s.kelasId === state.activeKelasId);
+  const user = state.currentUser;
+  const visibleClasses = getVisibleKelas(user, state);
+  const activeKelas = state.kelas.find((k) => k.id === state.activeKelasId) || visibleClasses[0] || state.kelas[0];
+  const teacherMapel = getTeacherMapelForKelas(user, activeKelas.id, state);
+  const siswaInActiveKelas = state.siswa.filter((s) => s.kelasId === activeKelas.id);
 
   // Today's date string
   const todayStr = new Date().toISOString().split('T')[0];
   const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const dayNameToday = daysIndo[new Date().getDay()];
 
-  // Today's Schedule
-  const jadwalToday = state.jadwal.filter(
-    (j) => j.hari === dayNameToday || j.hari === 'Senin' // fallback demo
-  );
+  // Today's Schedule (Filtered for teacher's assigned classes & mapel)
+  const jadwalToday = state.jadwal.filter((j) => {
+    const matchesDay = j.hari === dayNameToday || j.hari === 'Senin';
+    if (!matchesDay) return false;
+    if (user?.role === 'admin') return true;
+    // For guru: only show sessions for assigned classes and their subject
+    const isClassTaught = visibleClasses.some((k) => k.id === j.kelasId);
+    const isMapelTaught = j.mapelId.toLowerCase() === teacherMapel.id.toLowerCase();
+    return isClassTaught && isMapelTaught;
+  });
 
   // Today's Attendance in active class
   const absensiTodayActive = state.absensi.filter(
-    (a) => a.tanggal === todayStr && a.kelasId === state.activeKelasId
+    (a) => a.tanggal === todayStr && a.kelasId === activeKelas.id
   );
 
   const totalSiswaCount = siswaInActiveKelas.length;
@@ -59,9 +69,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       ? 0
       : 100;
 
-  // Grade averages in active class
+  // Grade averages in active class for this teacher's subject
   const rekapNilaiList = siswaInActiveKelas.map((s) =>
-    calculateNilaiSiswa(s, state.nilai, 'IPA', 75)
+    calculateNilaiSiswa(s, state.nilai, teacherMapel.id, teacherMapel.kkm)
   );
 
   const avgClassGrade =
@@ -102,9 +112,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {state.currentUser?.nama || state.profil.nama}
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-xl">
-              {state.currentUser?.role === 'admin'
+              {user?.role === 'admin'
                 ? `Pengelolaan data master sekolah, rombel kelas, akun guru, dan direktori siswa di ${state.pengaturanSekolah.namaSekolah}.`
-                : `Pantau administrasi ${activeKelas.namaKelas} · Mata Pelajaran ${state.profil.mataPelajaranUtama} di ${state.profil.sekolah}.`}
+                : `Pantau administrasi ${activeKelas.namaKelas} · Mata Pelajaran ${teacherMapel.nama} (${teacherMapel.kode}) di ${state.pengaturanSekolah.namaSekolah}.`}
             </p>
           </div>
 
@@ -167,8 +177,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-2xl font-extrabold text-slate-900 tabular-nums">
               {avgClassGrade}
             </span>
-            <span className={`text-xs font-semibold ${avgClassGrade >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
-              / 100 (KKM: 75)
+            <span className={`text-xs font-semibold ${avgClassGrade >= teacherMapel.kkm ? 'text-emerald-600' : 'text-amber-600'}`}>
+              / 100 (KKM: {teacherMapel.kkm})
             </span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">

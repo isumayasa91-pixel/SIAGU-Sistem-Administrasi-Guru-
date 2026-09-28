@@ -15,6 +15,7 @@ import {
   generateWhatsAppAbsensiText,
   formatNoHpWhatsApp,
 } from '../../utils/calculations';
+import { useNotification } from '../../context/NotificationContext';
 
 interface AbsensiViewProps {
   state: SiaguState;
@@ -33,6 +34,7 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
     new Date().toISOString().split('T')[0]
   );
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const { notifySuccess } = useNotification();
 
   const isSiswa = state.currentUser?.role === 'siswa';
 
@@ -94,6 +96,9 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
     );
 
     onUpdateAbsensi([...otherRecords, updatedRecord]);
+    const targetSiswa = siswaList.find((s) => s.id === siswaId);
+    const statusText = newStatus === 'H' ? 'Hadir' : newStatus === 'S' ? 'Sakit' : newStatus === 'I' ? 'Izin' : 'Alpa';
+    notifySuccess(`Presensi ${targetSiswa?.nama || 'siswa'} diset ${statusText} dan tersimpan.`, 'Presensi Disimpan');
   };
 
   const handleKeteranganChange = (siswaId: string, text: string) => {
@@ -122,6 +127,7 @@ export const AbsensiView: React.FC<AbsensiViewProps> = ({
     );
 
     onUpdateAbsensi([...otherRecords, ...newRecords]);
+    notifySuccess(`Seluruh siswa Kelas ${activeKelas.namaKelas} (${siswaList.length} siswa) berhasil diset Hadir dan tersimpan.`, 'Presensi Disimpan');
   };
 
   const handleOpenWhatsApp = (siswa: any, status: StatusAbsensi, keterangan?: string) => {

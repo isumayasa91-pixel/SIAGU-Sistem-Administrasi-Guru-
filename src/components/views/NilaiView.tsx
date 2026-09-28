@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   Plus,
@@ -14,6 +14,8 @@ import {
 import { SiaguState } from '../../utils/storage';
 import { NilaiRecord, KategoriNilai, Siswa } from '../../types/siagu';
 import { calculateNilaiSiswa } from '../../utils/calculations';
+import { useNotification } from '../../context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleMapelForKelas } from '../../utils/guruAssignment';
 
 interface NilaiViewProps {
   state: SiaguState;
@@ -26,8 +28,11 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
   onUpdateNilai,
   onNavigateToReport,
 }) => {
-  const [selectedMapel, setSelectedMapel] = useState<string>('IPA');
+  const user = state.currentUser;
+  const initialMapel = getTeacherMapelForKelas(user, state.activeKelasId, state);
+  const [selectedMapel, setSelectedMapel] = useState<string>(initialMapel.id);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const { notifySuccess } = useNotification();
 
   const isSiswa = state.currentUser?.role === 'siswa';
 
@@ -49,7 +54,18 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
   const activeKelas =
     state.kelas.find((k) => k.id === state.activeKelasId) || state.kelas[0];
   const siswaList = state.siswa.filter((s) => s.kelasId === state.activeKelasId);
-  const currentMapelObj = state.mapel.find((m) => m.id === selectedMapel) || state.mapel[0];
+  const visibleMapelList = getVisibleMapelForKelas(user, state.activeKelasId, state);
+  const currentMapelObj =
+    visibleMapelList.find((m) => m.id === selectedMapel) ||
+    state.mapel.find((m) => m.id === selectedMapel) ||
+    visibleMapelList[0] ||
+    state.mapel[0];
+
+  // Auto-sync selectedMapel to assigned mapel when active class or user changes
+  useEffect(() => {
+    const assigned = getTeacherMapelForKelas(user, state.activeKelasId, state);
+    setSelectedMapel(assigned.id);
+  }, [state.activeKelasId, user]);
 
   const filteredSiswa = siswaList.filter(
     (s) =>
@@ -93,6 +109,7 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
     };
 
     onUpdateNilai([...state.nilai, newRecord]);
+    notifySuccess(`Nilai ${formKategori} (${formNamaPenilaian}) berhasil disimpan!`, 'Nilai Berhasil Disimpan');
     setIsModalOpen(false);
   };
 
@@ -108,12 +125,14 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
     });
 
     onUpdateNilai(updatedList);
+    notifySuccess(`Perubahan nilai ${editingRecord.namaPenilaian} berhasil disimpan!`, 'Nilai Berhasil Disimpan');
     setEditingRecord(null);
   };
 
   const handleDeleteNilaiRecord = (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus komponen nilai ini?')) {
       onUpdateNilai(state.nilai.filter((n) => n.id !== id));
+      notifySuccess('Komponen nilai berhasil dihapus.', 'Nilai Dihapus');
     }
   };
 
@@ -142,6 +161,7 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    notifySuccess(`File CSV Nilai Kelas ${activeKelas.namaKelas} berhasil diunduh dan disimpan!`, 'File Berhasil Disimpan');
   };
 
   return (
@@ -168,12 +188,17 @@ export const NilaiView: React.FC<NilaiViewProps> = ({
               onChange={(e) => setSelectedMapel(e.target.value)}
               className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
             >
-              {state.mapel.map((m) => (
+              {visibleMapelList.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nama} ({m.kode})
                 </option>
               ))}
             </select>
+            {user?.role === 'guru' && (
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded border border-emerald-200">
+                Mapel Diampu
+              </span>
+            )}
           </div>
 
           <button

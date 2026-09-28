@@ -46,6 +46,8 @@ export const initialAccounts: UserAccount[] = [
     email: 'isumayasa91@guru.smp.belajar.id',
     mataPelajaran: 'IPA (Ilmu Pengetahuan Alam)',
     jabatan: 'Guru Mata Pelajaran IPA & Wali Kelas 7A',
+    kelasDiampu: ['7A', '7B'],
+    mapelPerKelas: { '7A': 'IPA', '7B': 'IPA' },
   },
   {
     id: 'U_ADMIN_01',

@@ -22,6 +22,7 @@ import {
 import * as XLSX from 'xlsx';
 import { SiaguState } from '../../utils/storage';
 import { PengaturanSekolah, ProfilGuru, UserAccount } from '../../types/siagu';
+import { useNotification } from '../../context/NotificationContext';
 
 interface PengaturanViewProps {
   state: SiaguState;
@@ -148,9 +149,11 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   const [excelGuruRows, setExcelGuruRows] = useState<any[]>([]);
   const [excelGuruFileName, setExcelGuruFileName] = useState<string>('');
   const [successGuruImportMsg, setSuccessGuruImportMsg] = useState<string>('');
+  const { notifySuccess, notifySaved, notifyError } = useNotification();
 
-  const triggerSuccessNotification = () => {
+  const triggerSuccessNotification = (message: string = 'Data pengaturan berhasil disimpan.', title: string = 'Data Berhasil Disimpan') => {
     setSavedSuccess(true);
+    notifySuccess(message, title);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
@@ -219,7 +222,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
       semester: sekSemester,
     });
 
-    triggerSuccessNotification();
+    triggerSuccessNotification('Data identitas sekolah & logo resmi berhasil disimpan!', 'Pengaturan Sekolah Disimpan');
   };
 
   const handleSaveKopSurat = (e: React.FormEvent) => {
@@ -245,7 +248,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
       kopGarisTipe,
     };
     onUpdatePengaturanSekolah(updatedSekolah);
-    triggerSuccessNotification();
+    triggerSuccessNotification('Format & desain kop surat resmi berhasil disimpan!', 'Kop Surat Disimpan');
   };
 
   const handleSyncFromSchoolData = () => {
@@ -316,7 +319,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
       onUpdateAccounts(updatedAccounts);
     }
 
-    triggerSuccessNotification();
+    triggerSuccessNotification('Data profil & foto pengguna berhasil disimpan!', 'Profil Pengguna Disimpan');
   };
 
   const handleCreateAccount = (e: React.FormEvent) => {
@@ -333,7 +336,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     };
     onUpdateAccounts([...state.accounts, newAcc]);
     setIsAddAccountOpen(false);
-    triggerSuccessNotification();
+    triggerSuccessNotification(`Akun pengguna untuk ${newAccNama} (${newAccUser}) berhasil dibuat dan disimpan!`, 'Akun Berhasil Disimpan');
   };
 
   const handleOpenEditAccountModal = (acc: UserAccount) => {
@@ -353,13 +356,14 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
 
     onUpdateAccounts(updatedAccounts);
     setEditingAccount(null);
-    triggerSuccessNotification();
+    triggerSuccessNotification(`Perubahan akun pengguna ${editingAccount.username} berhasil disimpan!`, 'Akun Berhasil Disimpan');
   };
 
   const handleDeleteAccount = (id: string, nama: string) => {
     if (!isAdmin) return;
     if (confirm(`Hapus akun pengguna ${nama}?`)) {
       onUpdateAccounts(state.accounts.filter((a) => a.id !== id));
+      notifySuccess(`Akun pengguna ${nama} berhasil dihapus.`, 'Akun Dihapus');
     }
   };
 
@@ -379,13 +383,14 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         const jsonRows: any[] = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
         if (jsonRows.length === 0) {
-          alert('File Excel data guru kosong atau format tidak terbaca.');
+          notifyError('File Excel data guru kosong atau format tidak terbaca.', 'File Kosong');
           return;
         }
 
         setExcelGuruRows(jsonRows);
+        notifySuccess(`File Excel berisi ${jsonRows.length} data guru siap diimpor.`, 'File Berhasil Dibaca');
       } catch (err) {
-        alert('Gagal membaca file Excel data guru.');
+        notifyError('Gagal membaca file Excel data guru.', 'Kesalahan File');
       }
     };
 
@@ -418,6 +423,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Guru');
     XLSX.writeFile(workbook, 'Template_Upload_Data_Guru_SIAGU.xlsx');
+    notifySuccess('File template upload data guru berhasil diunduh dan disimpan!', 'File Berhasil Disimpan');
   };
 
   const handleConfirmGuruExcelImport = () => {
@@ -457,6 +463,10 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     });
 
     onUpdateAccounts([...state.accounts, ...importedGuruAccounts]);
+    triggerSuccessNotification(
+      `Berhasil mengunggah & membuat ${importedGuruAccounts.length} akun guru baru dari file Excel!`,
+      'File Berhasil Diimpor & Disimpan'
+    );
     setSuccessGuruImportMsg(
       `Berhasil mengunggah & membuat ${importedGuruAccounts.length} akun guru baru!`
     );
@@ -1493,7 +1503,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.absensi.length}) rekaman data presensi?`)) {
                             onClearAbsensi?.();
-                            alert('Seluruh data presensi berhasil dihapus.');
+                            notifySuccess('Seluruh data presensi berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
@@ -1514,7 +1524,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.nilai.length}) data nilai siswa?`)) {
                             onClearNilai?.();
-                            alert('Seluruh data nilai berhasil dihapus.');
+                            notifySuccess('Seluruh data nilai berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
@@ -1535,7 +1545,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.jurnal.length}) data jurnal KBM?`)) {
                             onClearJurnal?.();
-                            alert('Seluruh data jurnal KBM berhasil dihapus.');
+                            notifySuccess('Seluruh data jurnal KBM berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
@@ -1556,7 +1566,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.jadwal.length}) slot jadwal mengajar?`)) {
                             onClearJadwal?.();
-                            alert('Seluruh data jadwal mengajar berhasil dihapus.');
+                            notifySuccess('Seluruh data jadwal mengajar berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
@@ -1577,7 +1587,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.siswa.length}) data siswa?`)) {
                             onClearSiswa?.();
-                            alert('Seluruh data siswa berhasil dihapus.');
+                            notifySuccess('Seluruh data siswa berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
@@ -1598,7 +1608,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         onClick={() => {
                           if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.kelas.length}) data kelas?`)) {
                             onClearKelas?.();
-                            alert('Seluruh data kelas berhasil dihapus.');
+                            notifySuccess('Seluruh data kelas berhasil dihapus.', 'Data Dihapus');
                           }
                         }}
                         className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"

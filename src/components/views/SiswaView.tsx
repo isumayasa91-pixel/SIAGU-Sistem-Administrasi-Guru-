@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import { SiaguState } from '../../utils/storage';
 import { Siswa, JenisKelamin } from '../../types/siagu';
 import { formatNoHpWhatsApp } from '../../utils/calculations';
+import { useNotification } from '../../context/NotificationContext';
 
 interface SiswaViewProps {
   state: SiaguState;
@@ -27,6 +28,7 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingSiswaId, setEditingSiswaId] = useState<string | null>(null);
+  const { notifySuccess, notifyError } = useNotification();
 
   const isAdmin = state.currentUser?.role === 'admin';
 
@@ -129,6 +131,7 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
         alamat: formAlamat,
       };
       onUpdateSiswa([...state.siswa, newSiswa]);
+      notifySuccess(`Data siswa ${formNama} berhasil disimpan!`, 'Data Siswa Disimpan');
     }
 
     setIsModalOpen(false);
@@ -141,6 +144,7 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
     }
     if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${nama}?`)) {
       onUpdateSiswa(state.siswa.filter((s) => s.id !== id));
+      notifySuccess(`Data siswa ${nama} berhasil dihapus.`, 'Data Dihapus');
     }
   };
 
@@ -168,13 +172,14 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
         const jsonRows: any[] = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
         if (jsonRows.length === 0) {
-          alert('File Excel kosong atau format tidak terbaca.');
+          notifyError('File Excel kosong atau format tidak terbaca.', 'File Kosong');
           return;
         }
 
         setExcelRows(jsonRows);
+        notifySuccess(`File Excel berisi ${jsonRows.length} data siswa siap diimpor.`, 'File Berhasil Dibaca');
       } catch (err) {
-        alert('Gagal membaca file Excel/CSV.');
+        notifyError('Gagal membaca file Excel/CSV data siswa.', 'Kesalahan File');
       }
     };
 
@@ -207,6 +212,7 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa');
     XLSX.writeFile(workbook, 'Template_Data_Siswa_SIAGU.xlsx');
+    notifySuccess('File template upload data siswa berhasil diunduh dan disimpan!', 'File Berhasil Disimpan');
   };
 
   const handleConfirmExcelImport = () => {
@@ -242,6 +248,10 @@ export const SiswaView: React.FC<SiswaViewProps> = ({ state, onUpdateSiswa }) =>
     });
 
     onUpdateSiswa([...state.siswa, ...importedList]);
+    notifySuccess(
+      `Berhasil mengimpor & menyimpan ${importedList.length} siswa ke Kelas ${excelTargetKelasId}!`,
+      'File Berhasil Diimpor & Disimpan'
+    );
     setSuccessImportMsg(`Berhasil mengimpor ${importedList.length} siswa ke Kelas ${excelTargetKelasId}!`);
     setExcelRows([]);
     setExcelFileName('');

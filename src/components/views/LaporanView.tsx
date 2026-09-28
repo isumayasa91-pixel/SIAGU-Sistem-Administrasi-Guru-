@@ -9,23 +9,38 @@ import {
 } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { calculateNilaiSiswa, calculateAbsensiSiswa } from '../../utils/calculations';
+import { getTeacherMapelForKelas, getVisibleKelas } from '../../utils/guruAssignment';
 
 interface LaporanViewProps {
   state: SiaguState;
+  onChangeActiveKelas?: (kelasId: string) => void;
 }
 
 type LaporanType = 'rekap_nilai' | 'rekap_absensi' | 'jurnal_kbm';
 
-export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
+export const LaporanView: React.FC<LaporanViewProps> = ({ state, onChangeActiveKelas }) => {
   const [reportType, setReportType] = useState<LaporanType>('jurnal_kbm');
+  const user = state.currentUser;
+  const visibleClasses = getVisibleKelas(user, state);
 
   const activeKelas =
-    state.kelas.find((k) => k.id === state.activeKelasId) || state.kelas[0];
-  const siswaList = state.siswa.filter((s) => s.kelasId === state.activeKelasId);
-  const currentMapelObj = state.mapel[0];
-  const jurnalInActiveKelas = state.jurnal.filter(
-    (j) => j.kelasId === state.activeKelasId
-  );
+    visibleClasses.find((k) => k.id === state.activeKelasId) ||
+    state.kelas.find((k) => k.id === state.activeKelasId) ||
+    visibleClasses[0] ||
+    state.kelas[0];
+
+  const currentMapelObj = getTeacherMapelForKelas(user, activeKelas.id, state);
+  const siswaList = state.siswa.filter((s) => s.kelasId === activeKelas.id);
+
+  const jurnalInActiveKelas = state.jurnal.filter((j) => {
+    if (j.kelasId !== activeKelas.id) return false;
+    if (user?.role === 'admin') return true;
+    return (
+      j.mapelId.toLowerCase() === currentMapelObj.id.toLowerCase() ||
+      j.mapelId.toLowerCase() === currentMapelObj.kode.toLowerCase() ||
+      currentMapelObj.nama.toLowerCase().includes(j.mapelId.toLowerCase())
+    );
+  });
 
   const handleTriggerPrint = () => {
     window.print();
@@ -47,6 +62,28 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Class Selector for Report */}
+          <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="text-xs text-slate-500 font-bold hidden sm:inline">Kelas:</span>
+            <select
+              value={activeKelas.id}
+              onChange={(e) => onChangeActiveKelas && onChangeActiveKelas(e.target.value)}
+              className="bg-transparent text-xs font-extrabold text-slate-900 focus:outline-none cursor-pointer"
+            >
+              {visibleClasses.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.namaKelas}
+                </option>
+              ))}
+            </select>
+            {user?.role === 'guru' && (
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded">
+                {currentMapelObj.kode || currentMapelObj.id}
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setReportType('jurnal_kbm')}
@@ -186,12 +223,12 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-4 text-xs font-medium text-slate-800 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
           <div>
-            <div><span className="text-slate-500">Mata Pelajaran:</span> <b>{state.profil.mataPelajaranUtama}</b></div>
+            <div><span className="text-slate-500">Mata Pelajaran:</span> <b>{currentMapelObj.nama} ({currentMapelObj.kode})</b></div>
             <div><span className="text-slate-500">Kelas Target:</span> <b>{activeKelas.namaKelas}</b></div>
           </div>
           <div>
-            <div><span className="text-slate-500">Guru Pengampu:</span> <b>{state.profil.nama}</b></div>
-            <div><span className="text-slate-500">NIP Guru:</span> <b>{state.profil.nip}</b></div>
+            <div><span className="text-slate-500">Guru Pengampu:</span> <b>{user?.nama || state.profil.nama}</b></div>
+            <div><span className="text-slate-500">NIP Guru:</span> <b>{user?.nip || state.profil.nip}</b></div>
           </div>
         </div>
 
@@ -258,7 +295,7 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state }) => {
                   const rekap = calculateNilaiSiswa(
                     s,
                     state.nilai,
-                    'IPA',
+                    currentMapelObj.id,
                     currentMapelObj?.kkm || 75
                   );
                   return (

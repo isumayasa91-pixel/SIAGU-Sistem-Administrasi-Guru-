@@ -10,26 +10,34 @@ import {
   Users,
   CheckCircle2,
   ShieldAlert,
+  BookOpen,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { SiaguState } from '../../utils/storage';
 import { Kelas, Siswa, JenisKelamin } from '../../types/siagu';
+import { useNotification } from '../../context/NotificationContext';
+import { getTeacherMapelForKelas, getVisibleKelas } from '../../utils/guruAssignment';
 
 interface KelasViewProps {
   state: SiaguState;
   onUpdateKelas: (updatedKelas: Kelas[]) => void;
   onUpdateSiswa: (updatedSiswa: Siswa[]) => void;
+  onChangeActiveKelas?: (kelasId: string) => void;
 }
 
 export const KelasView: React.FC<KelasViewProps> = ({
   state,
   onUpdateKelas,
   onUpdateSiswa,
+  onChangeActiveKelas,
 }) => {
   const [isAddKelasModalOpen, setIsAddKelasModalOpen] = useState<boolean>(false);
   const [editingKelasId, setEditingKelasId] = useState<string | null>(null);
+  const { notifySuccess, notifyError } = useNotification();
 
-  const isAdmin = state.currentUser?.role === 'admin';
+  const user = state.currentUser;
+  const isAdmin = user?.role === 'admin';
+  const visibleClasses = getVisibleKelas(user, state);
 
   // Form State: Add/Edit Kelas
   const [formKelasNama, setFormKelasNama] = useState<string>('');
@@ -84,6 +92,7 @@ export const KelasView: React.FC<KelasViewProps> = ({
         return k;
       });
       onUpdateKelas(updated);
+      notifySuccess(`Perubahan data ${formKelasNama} berhasil disimpan!`, 'Data Kelas Disimpan');
     } else {
       const newId = formKelasNama.replace(/[^a-zA-Z0-9]/g, '');
       const newKelas: Kelas = {
@@ -95,6 +104,7 @@ export const KelasView: React.FC<KelasViewProps> = ({
         semester: state.pengaturanSekolah.semester,
       };
       onUpdateKelas([...state.kelas, newKelas]);
+      notifySuccess(`Data kelas baru ${formKelasNama} berhasil disimpan!`, 'Data Kelas Disimpan');
     }
 
     setIsAddKelasModalOpen(false);
@@ -107,6 +117,7 @@ export const KelasView: React.FC<KelasViewProps> = ({
     }
     if (confirm(`Hapus kelas ${nama}? Data siswa di kelas ini akan tetap tersimpan.`)) {
       onUpdateKelas(state.kelas.filter((k) => k.id !== id));
+      notifySuccess(`Kelas ${nama} berhasil dihapus.`, 'Data Dihapus');
     }
   };
 
@@ -127,13 +138,14 @@ export const KelasView: React.FC<KelasViewProps> = ({
         const jsonRows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
         if (jsonRows.length === 0) {
-          alert('File Excel kosong atau format tidak terbaca.');
+          notifyError('File Excel kosong atau format tidak terbaca.', 'File Kosong');
           return;
         }
 
         setParsedExcelRows(jsonRows);
+        notifySuccess(`File Excel berisi ${jsonRows.length} data siswa siap diimpor.`, 'File Berhasil Dibaca');
       } catch (err) {
-        alert('Gagal membaca file Excel. Pastikan format file .xlsx, .xls, atau .csv');
+        notifyError('Gagal membaca file Excel. Pastikan format file .xlsx, .xls, atau .csv', 'Kesalahan File');
       }
     };
 
@@ -166,6 +178,7 @@ export const KelasView: React.FC<KelasViewProps> = ({
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa');
     XLSX.writeFile(workbook, 'Template_Data_Siswa_SIAGU.xlsx');
+    notifySuccess('File template data siswa berhasil diunduh dan disimpan!', 'File Berhasil Disimpan');
   };
 
   const handleConfirmImportExcel = () => {
@@ -202,6 +215,10 @@ export const KelasView: React.FC<KelasViewProps> = ({
     });
 
     onUpdateSiswa([...state.siswa, ...importedSiswaList]);
+    notifySuccess(
+      `Berhasil mengimpor & menyimpan ${importedSiswaList.length} siswa ke Kelas ${targetImportKelasId}!`,
+      'File Berhasil Diimpor & Disimpan'
+    );
     setImportSuccessMsg(
       `Berhasil mengimpor ${importedSiswaList.length} siswa ke Kelas ${targetImportKelasId}!`
     );
@@ -257,11 +274,27 @@ export const KelasView: React.FC<KelasViewProps> = ({
         )}
       </div>
 
+      {/* Teacher Assigned Class Notice */}
+      {user?.role === 'guru' && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-medium text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              Menampilkan <b>{visibleClasses.length} kelas yang Anda ampu</b> ({visibleClasses.map((c) => c.namaKelas).join(', ')}). Rombel kelas lain dikelola terpusat oleh Admin.
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-xl border border-emerald-200 shrink-0">
+            Guru: {user.nama}
+          </span>
+        </div>
+      )}
+
       {/* Class Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {state.kelas.map((k) => {
+        {(isAdmin ? state.kelas : visibleClasses).map((k) => {
           const siswaCount = state.siswa.filter((s) => s.kelasId === k.id).length;
           const isActive = k.id === state.activeKelasId;
+          const kMapel = getTeacherMapelForKelas(user, k.id, state);
 
           return (
             <div
@@ -312,11 +345,33 @@ export const KelasView: React.FC<KelasViewProps> = ({
                 Wali Kelas: <b className={isActive ? 'text-white' : 'text-slate-800'}>{k.waliKelas}</b>
               </p>
 
+              {user?.role === 'guru' && (
+                <div
+                  className={`mt-2.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                  <span>Mapel: {kMapel.nama} ({kMapel.kode})</span>
+                </div>
+              )}
+
               <div className="mt-4 pt-3 border-t border-slate-200/30 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 font-bold">
                   <Users className="w-4 h-4 text-emerald-400" />
                   <span>{siswaCount} Siswa Terdaftar</span>
                 </div>
+
+                {onChangeActiveKelas && !isActive && (
+                  <button
+                    onClick={() => onChangeActiveKelas(k.id)}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                  >
+                    Pilih Kelas
+                  </button>
+                )}
 
                 {isAdmin && (
                   <button
