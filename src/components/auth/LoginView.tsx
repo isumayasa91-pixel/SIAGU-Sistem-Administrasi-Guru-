@@ -13,6 +13,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
+  const logoSekolah = state.pengaturanSekolah.logoSekolahUrl;
+  const logoPemda = state.pengaturanSekolah.logoKabupatenUrl;
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -88,17 +91,48 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
 
       <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-300/80 relative z-10 space-y-6">
         
-        {/* Header Logo & Title */}
+        {/* Header Dynamic School Logo & Title */}
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white mx-auto shadow-md font-black text-2xl tracking-tight mb-3">
-            S
+          {/* Logo Display Section */}
+          <div className="flex items-center justify-center gap-3 mb-3">
+            {logoPemda && (
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center overflow-hidden shadow-2xs">
+                <img
+                  src={logoPemda}
+                  alt="Logo Pemda"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            )}
+
+            {logoSekolah ? (
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center overflow-hidden shadow-2xs">
+                <img
+                  src={logoSekolah}
+                  alt="Logo Sekolah"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            ) : (
+              !logoPemda && (
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md font-black text-2xl tracking-tight">
+                  S
+                </div>
+              )
+            )}
           </div>
+
           <h1 className="text-2xl font-black tracking-tight text-slate-900">
             SIAGU Login Portal
           </h1>
-          <p className="text-xs font-semibold text-slate-500 mt-1">
+          <p className="text-xs font-semibold text-slate-600 mt-1">
             {state.pengaturanSekolah.namaSekolah}
           </p>
+          {state.pengaturanSekolah.namaKabupaten && (
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+              {state.pengaturanSekolah.namaKabupaten}
+            </p>
+          )}
         </div>
 
         {/* Info Banner for Students */}
