@@ -133,6 +133,30 @@ export default function App() {
     setState((prev) => ({ ...prev, accounts: updatedAccounts }));
   };
 
+  const handleClearAbsensi = () => {
+    setState((prev) => ({ ...prev, absensi: [] }));
+  };
+
+  const handleClearNilai = () => {
+    setState((prev) => ({ ...prev, nilai: [] }));
+  };
+
+  const handleClearJadwal = () => {
+    setState((prev) => ({ ...prev, jadwal: [] }));
+  };
+
+  const handleClearJurnal = () => {
+    setState((prev) => ({ ...prev, jurnal: [] }));
+  };
+
+  const handleClearSiswa = () => {
+    setState((prev) => ({ ...prev, siswa: [] }));
+  };
+
+  const handleClearKelas = () => {
+    setState((prev) => ({ ...prev, kelas: [] }));
+  };
+
   const handleExportBackup = () => {
     exportSiaguBackupJSON(state);
   };
@@ -238,6 +262,12 @@ export default function App() {
             onUpdatePengaturanSekolah={handleUpdatePengaturanSekolah}
             onUpdateProfilGuru={handleUpdateProfilGuru}
             onUpdateAccounts={handleUpdateAccounts}
+            onClearAbsensi={handleClearAbsensi}
+            onClearNilai={handleClearNilai}
+            onClearJadwal={handleClearJadwal}
+            onClearJurnal={handleClearJurnal}
+            onClearSiswa={handleClearSiswa}
+            onClearKelas={handleClearKelas}
             onExportBackup={handleExportBackup}
             onImportBackup={handleImportBackup}
             onResetDefault={handleResetDefault}

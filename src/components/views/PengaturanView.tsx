@@ -24,6 +24,12 @@ interface PengaturanViewProps {
   onUpdatePengaturanSekolah: (updated: PengaturanSekolah) => void;
   onUpdateProfilGuru: (updated: ProfilGuru) => void;
   onUpdateAccounts: (updated: UserAccount[]) => void;
+  onClearAbsensi?: () => void;
+  onClearNilai?: () => void;
+  onClearJadwal?: () => void;
+  onClearJurnal?: () => void;
+  onClearSiswa?: () => void;
+  onClearKelas?: () => void;
   onExportBackup: () => void;
   onImportBackup: (importedState: SiaguState) => void;
   onResetDefault: () => void;
@@ -34,6 +40,12 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   onUpdatePengaturanSekolah,
   onUpdateProfilGuru,
   onUpdateAccounts,
+  onClearAbsensi,
+  onClearNilai,
+  onClearJadwal,
+  onClearJurnal,
+  onClearSiswa,
+  onClearKelas,
   onExportBackup,
   onImportBackup,
   onResetDefault,
@@ -871,21 +883,158 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
             </div>
 
             {isAdmin && (
-              <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200/60 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-amber-900">Reset ke Data Bawaan Awal</h3>
-                  <p className="text-amber-800 mt-0.5">
-                    Kembalikan seluruh database ke preset sampel bawaan pabrik.
-                  </p>
+              <>
+                <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200/60 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-amber-900">Reset ke Data Bawaan Awal</h3>
+                    <p className="text-amber-800 mt-0.5">
+                      Kembalikan seluruh database ke preset sampel bawaan pabrik.
+                    </p>
+                  </div>
+                  <button
+                    onClick={onResetDefault}
+                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Reset All</span>
+                  </button>
                 </div>
-                <button
-                  onClick={onResetDefault}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Reset</span>
-                </button>
-              </div>
+
+                {/* Hapus Data Spesifik Per Menu */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider text-rose-600">
+                    Hapus Data Spesifik Per Menu (Admin Only)
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {/* Hapus Data Presensi */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">1. Data Presensi / Absensi</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.absensi.length}</b> rekaman</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.absensi.length}) rekaman data presensi?`)) {
+                            onClearAbsensi?.();
+                            alert('Seluruh data presensi berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Absensi</span>
+                      </button>
+                    </div>
+
+                    {/* Hapus Data Nilai */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">2. Data Nilai Siswa</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.nilai.length}</b> nilai</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.nilai.length}) data nilai siswa?`)) {
+                            onClearNilai?.();
+                            alert('Seluruh data nilai berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Nilai</span>
+                      </button>
+                    </div>
+
+                    {/* Hapus Data Jurnal KBM */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">3. Data Jurnal KBM & Agenda</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.jurnal.length}</b> agenda</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.jurnal.length}) data jurnal KBM?`)) {
+                            onClearJurnal?.();
+                            alert('Seluruh data jurnal KBM berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Jurnal</span>
+                      </button>
+                    </div>
+
+                    {/* Hapus Jadwal Mengajar */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">4. Data Jadwal Mengajar</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.jadwal.length}</b> slot jadwal</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.jadwal.length}) slot jadwal mengajar?`)) {
+                            onClearJadwal?.();
+                            alert('Seluruh data jadwal mengajar berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Jadwal</span>
+                      </button>
+                    </div>
+
+                    {/* Hapus Data Siswa */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">5. Data Master Siswa</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.siswa.length}</b> siswa</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.siswa.length}) data siswa?`)) {
+                            onClearSiswa?.();
+                            alert('Seluruh data siswa berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Siswa</span>
+                      </button>
+                    </div>
+
+                    {/* Hapus Data Kelas */}
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200/60 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-slate-900">6. Data Master Kelas</div>
+                        <div className="text-[11px] text-slate-500">Tersimpan: <b>{state.kelas.length}</b> kelas</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin MENGHAPUS SEMUA (${state.kelas.length}) data kelas?`)) {
+                            onClearKelas?.();
+                            alert('Seluruh data kelas berhasil dihapus.');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Kelas</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>

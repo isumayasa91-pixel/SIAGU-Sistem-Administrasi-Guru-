@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, AlertCircle, LogIn, GraduationCap } from 'lucide-react';
+import { Lock, User, AlertCircle, LogIn, GraduationCap, Eye, EyeOff } from 'lucide-react';
 import { UserAccount } from '../../types/siagu';
 import { SiaguState } from '../../utils/storage';
 
@@ -11,6 +11,8 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) => {
   const [usernameInput, setUsernameInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showUsername, setShowUsername] = useState<boolean>(true);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const logoSekolah = state.pengaturanSekolah.logoSekolahUrl;
@@ -145,16 +147,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
               Username (NIP Guru / NISN Siswa)
             </label>
             <div className="relative">
-              <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+              <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
               <input
-                type="text"
+                type={showUsername ? 'text' : 'password'}
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 placeholder="Masukkan username / NISN..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
                 autoFocus
               />
+              <button
+                type="button"
+                onClick={() => setShowUsername(!showUsername)}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5 rounded-md"
+                title={showUsername ? 'Sembunyikan Username' : 'Tampilkan Username'}
+              >
+                {showUsername ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -163,15 +177,27 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
               Kata Sandi / Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Masukkan kata sandi / NISN..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5 rounded-md"
+                title={showPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
