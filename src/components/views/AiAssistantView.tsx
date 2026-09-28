@@ -1091,7 +1091,21 @@ Sajikan modul ajar secara sistematis dengan struktur:
                 </div>
               ) : activeTool === 'lkpd' && viewMode === 'table' ? (
                 <div className="overflow-x-auto max-h-[700px] overflow-y-auto print:max-h-none print:overflow-visible">
-                  <LkpdTableDocument content={resultText} />
+                  <LkpdTableDocument
+                    state={state}
+                    mapel={lkpdMapel}
+                    fase={lkpdFase}
+                    tingkatKelas={lkpdTingkatKelas}
+                    kelas={activeKelasObj.namaKelas}
+                    topik={lkpdTopik}
+                    model={lkpdModel}
+                    aktivitas={lkpdAktivitas}
+                    alokasi={lkpdAlokasi}
+                    jumlahAnggota={lkpdJumlahAnggota}
+                    alatBahan={lkpdAlatBahan}
+                    tujuan={lkpdTujuan}
+                    generatedText={resultText}
+                  />
                 </div>
               ) : activeTool === 'soal_hots' && viewMode === 'table' ? (
                 <div className="overflow-x-auto max-h-[700px] overflow-y-auto print:max-h-none print:overflow-visible">
