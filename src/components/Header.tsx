@@ -9,8 +9,10 @@ import {
   ShieldCheck,
   UserCheck,
   CheckCircle2,
+  CloudCheck,
+  Save,
 } from 'lucide-react';
-import { SiaguState } from '../utils/storage';
+import { SiaguState, saveSiaguData } from '../utils/storage';
 import { useNotification } from '../context/NotificationContext';
 import { getTeacherMapelForKelas, getVisibleKelas } from '../utils/guruAssignment';
 
@@ -39,6 +41,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   const visibleKelas = getVisibleKelas(user, state);
   const activeMapelObj = getTeacherMapelForKelas(user, state.activeKelasId, state);
+
+  const handleCloudSave = () => {
+    saveSiaguData(state);
+    notifySuccess(
+      'Data berhasil disimpan ke server central! Data otomatis tersinkron dan dapat dibuka di HP, laptop, atau PC lain walau dengan akun/email berbeda.',
+      '💾 Sinkronisasi Cloud Berhasil'
+    );
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -189,8 +199,17 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* Export/Import Utilities */}
-            <div className="hidden lg:flex items-center gap-1">
+            {/* Export/Import & Cloud Save Utilities */}
+            <div className="hidden lg:flex items-center gap-1.5">
+              <button
+                onClick={handleCloudSave}
+                title="Simpan & Sinkronkan Data ke Server Central (Dapat dibuka di HP/Laptop lain)"
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Save className="w-3.5 h-3.5 text-amber-300" />
+                <span>Simpan Data</span>
+              </button>
+
               <button
                 onClick={onExportBackup}
                 title="Unduh Backup Data JSON"
