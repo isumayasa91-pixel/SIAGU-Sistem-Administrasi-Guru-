@@ -14,7 +14,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const logoSekolah = state.pengaturanSekolah.logoSekolahUrl;
-  const logoPemda = state.pengaturanSekolah.logoKabupatenUrl;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,20 +92,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
         
         {/* Header Dynamic School Logo & Title */}
         <div className="text-center">
-          {/* Logo Display Section */}
-          <div className="flex items-center justify-center gap-3 mb-3">
-            {logoPemda && (
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center overflow-hidden shadow-2xs">
-                <img
-                  src={logoPemda}
-                  alt="Logo Pemda"
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
-            )}
-
+          {/* Only School Logo Display */}
+          <div className="flex items-center justify-center mb-3">
             {logoSekolah ? (
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center overflow-hidden shadow-2xs">
+              <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 p-1.5 flex items-center justify-center overflow-hidden shadow-2xs">
                 <img
                   src={logoSekolah}
                   alt="Logo Sekolah"
@@ -114,11 +103,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
                 />
               </div>
             ) : (
-              !logoPemda && (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md font-black text-2xl tracking-tight">
-                  S
-                </div>
-              )
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md font-black text-2xl tracking-tight">
+                S
+              </div>
             )}
           </div>
 
