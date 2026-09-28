@@ -80,13 +80,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 relative overflow-hidden font-sans">
       
       {/* Background Radial Glow */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl border border-slate-200/80 relative z-10 space-y-6">
+      <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-300/80 relative z-10 space-y-6">
         
         {/* Header Logo & Title */}
         <div className="text-center">

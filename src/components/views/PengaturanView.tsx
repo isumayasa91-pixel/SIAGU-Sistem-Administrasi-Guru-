@@ -7,11 +7,15 @@ import {
   Save,
   Plus,
   Trash2,
+  Edit,
   Download,
+  Upload,
   RefreshCw,
   CheckCircle2,
   Image as ImageIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { SiaguState } from '../../utils/storage';
 import { PengaturanSekolah, ProfilGuru, UserAccount } from '../../types/siagu';
 
@@ -82,6 +86,15 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
   const [newAccNama, setNewAccNama] = useState<string>('');
   const [newAccRole, setNewAccRole] = useState<'guru' | 'admin'>('guru');
   const [newAccPass, setNewAccPass] = useState<string>('123456');
+
+  // Edit Account Modal Form State (Admin Only)
+  const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null);
+
+  // Excel Guru Upload Modal State (Admin Only)
+  const [isExcelGuruModalOpen, setIsExcelGuruModalOpen] = useState<boolean>(false);
+  const [excelGuruRows, setExcelGuruRows] = useState<any[]>([]);
+  const [excelGuruFileName, setExcelGuruFileName] = useState<string>('');
+  const [successGuruImportMsg, setSuccessGuruImportMsg] = useState<string>('');
 
   const triggerSuccessNotification = () => {
     setSavedSuccess(true);
@@ -197,11 +210,136 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
     triggerSuccessNotification();
   };
 
+  const handleOpenEditAccountModal = (acc: UserAccount) => {
+    setEditingAccount({ ...acc });
+  };
+
+  const handleSaveEditedAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+
+    const updatedAccounts = state.accounts.map((acc) => {
+      if (acc.id === editingAccount.id) {
+        return editingAccount;
+      }
+      return acc;
+    });
+
+    onUpdateAccounts(updatedAccounts);
+    setEditingAccount(null);
+    triggerSuccessNotification();
+  };
+
   const handleDeleteAccount = (id: string, nama: string) => {
     if (!isAdmin) return;
     if (confirm(`Hapus akun pengguna ${nama}?`)) {
       onUpdateAccounts(state.accounts.filter((a) => a.id !== id));
     }
+  };
+
+  // Excel Upload Data Guru Logic
+  const handleExcelGuruFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelGuruFileName(file.name);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRows: any[] = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+        if (jsonRows.length === 0) {
+          alert('File Excel data guru kosong atau format tidak terbaca.');
+          return;
+        }
+
+        setExcelGuruRows(jsonRows);
+      } catch (err) {
+        alert('Gagal membaca file Excel data guru.');
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleDownloadGuruExcelTemplate = () => {
+    const sampleData = [
+      {
+        NIP: '19850212 201001 2 004',
+        'Nama Lengkap Guru & Gelar': 'Dra. Ni Made Sartika, M.Pd.',
+        Username: 'sartika_ipa',
+        'Kata Sandi': 'guru123',
+        Email: 'sartika@guru.smp.belajar.id',
+        'Mata Pelajaran Utama': 'Ilmu Pengetahuan Alam (IPA)',
+        'Peran (Guru/Admin)': 'guru',
+      },
+      {
+        NIP: '19880715 201202 1 008',
+        'Nama Lengkap Guru & Gelar': 'I Gede Budiarsa, S.Pd.',
+        Username: 'budiarsa_mtk',
+        'Kata Sandi': 'guru123',
+        Email: 'budiarsa@guru.smp.belajar.id',
+        'Mata Pelajaran Utama': 'Matematika',
+        'Peran (Guru/Admin)': 'guru',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Guru');
+    XLSX.writeFile(workbook, 'Template_Upload_Data_Guru_SIAGU.xlsx');
+  };
+
+  const handleConfirmGuruExcelImport = () => {
+    if (!isAdmin) return;
+    if (excelGuruRows.length === 0) return;
+
+    const importedGuruAccounts: UserAccount[] = excelGuruRows.map((row, i) => {
+      const nama =
+        row['Nama Lengkap Guru & Gelar'] ||
+        row['Nama Lengkap'] ||
+        row['Nama'] ||
+        `Guru Pengampu ${i + 1}`;
+      const nip = String(row['NIP'] || row['Nip'] || '');
+      const username = String(
+        row['Username'] || row['username'] || `guru_${Date.now()}_${i}`
+      );
+      const password = String(row['Kata Sandi'] || row['Password'] || '123456');
+      const email = String(
+        row['Email'] || row['email'] || `${username}@guru.smp.belajar.id`
+      );
+      const mataPelajaran = String(
+        row['Mata Pelajaran Utama'] || row['Mapel'] || 'IPA'
+      );
+      const roleRaw = String(row['Peran (Guru/Admin)'] || row['Role'] || 'guru').toLowerCase();
+      const role: 'guru' | 'admin' = roleRaw.includes('admin') ? 'admin' : 'guru';
+
+      return {
+        id: `U_XL_${Date.now()}_${i}`,
+        username,
+        nama,
+        nip,
+        email,
+        password,
+        role,
+        mataPelajaran,
+      };
+    });
+
+    onUpdateAccounts([...state.accounts, ...importedGuruAccounts]);
+    setSuccessGuruImportMsg(
+      `Berhasil mengunggah & membuat ${importedGuruAccounts.length} akun guru baru!`
+    );
+    setExcelGuruRows([]);
+    setExcelGuruFileName('');
+    setTimeout(() => {
+      setSuccessGuruImportMsg('');
+      setIsExcelGuruModalOpen(false);
+    }, 2000);
   };
 
   return (
@@ -212,11 +350,11 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Settings className="w-5 h-5 text-emerald-600" />
-            <span>{isAdmin ? 'Pengaturan Master Sekolah & Pengguna' : 'Pengaturan Profil Pengguna'}</span>
+            <span>{isAdmin ? 'Pengaturan Master Sekolah & Upload Data Guru' : 'Pengaturan Profil Pengguna'}</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             {isAdmin
-              ? 'Konfigurasi identitas sekolah, logo Pemda/Sekolah, serta manajemen akun sistem.'
+              ? 'Konfigurasi identitas sekolah, logo Pemda/Sekolah, serta kelola & edit data guru.'
               : `Pengaturan foto profil dan kata sandi untuk ${currentUser?.nama || 'Pengguna'}.`}
           </p>
         </div>
@@ -242,7 +380,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Data & Logo Sekolah (Portal Admin)</span>
+            <span>Data & Logo Sekolah</span>
           </button>
         )}
 
@@ -258,7 +396,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
           <span>Foto & Profil Saya</span>
         </button>
 
-        {/* Kelola Akun Sub-tab: VISIBLE FOR ADMIN ONLY */}
+        {/* Kelola Akun & Upload Data Guru Sub-tab: VISIBLE FOR ADMIN ONLY */}
         {isAdmin && (
           <button
             onClick={() => setActiveTool('akun')}
@@ -269,7 +407,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-purple-400" />
-            <span>Kelola Akun Guru ({state.accounts.length})</span>
+            <span>Kelola & Upload Data Guru ({state.accounts.length})</span>
           </button>
         )}
 
@@ -605,29 +743,46 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         </div>
       )}
 
-      {/* Sub-Tab 3: Kelola Pengguna Accounts (ADMIN ONLY) */}
+      {/* Sub-Tab 3: Kelola & Upload Data Guru (ADMIN ONLY) */}
       {isAdmin && activeSubTab === 'akun' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">Daftar Akun Guru & Admin Sistem</h2>
-            <button
-              onClick={() => setIsAddAccountOpen(true)}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Akun Baru (Admin)</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Daftar Akun Guru & Admin Sistem</h2>
+              <p className="text-xs text-slate-500">
+                Kelola, edit data guru, atau unggah data guru secara massal via Excel.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsExcelGuruModalOpen(true)}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Upload Data Guru (Excel)</span>
+              </button>
+
+              <button
+                onClick={() => setIsAddAccountOpen(true)}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Akun Baru</span>
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
-                  <th className="py-3 px-4">Nama Pengguna</th>
+                  <th className="py-3 px-4">Nama Guru / Pengguna</th>
                   <th className="py-3 px-4">Username</th>
                   <th className="py-3 px-4 text-center">Peran (Role)</th>
+                  <th className="py-3 px-4">Mapel / Bidang</th>
                   <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4 text-center">Aksi (Admin)</th>
+                  <th className="py-3 px-4 text-center">Aksi & Edit (Admin)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-800">
@@ -642,7 +797,10 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                             acc.nama.charAt(0)
                           )}
                         </div>
-                        <span className="font-bold text-slate-900">{acc.nama}</span>
+                        <div>
+                          <span className="font-bold text-slate-900 block">{acc.nama}</span>
+                          {acc.nip && <span className="text-[10px] text-slate-400 font-mono">NIP: {acc.nip}</span>}
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 font-mono text-slate-600">{acc.username}</td>
@@ -657,15 +815,28 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                         {acc.role}
                       </span>
                     </td>
+                    <td className="py-3 px-4 font-semibold text-slate-700">
+                      {acc.mataPelajaran || '—'}
+                    </td>
                     <td className="py-3 px-4 text-slate-600">{acc.email}</td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleDeleteAccount(acc.id, acc.nama)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                        title="Hapus Akun"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditAccountModal(acc)}
+                          className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                          title="Edit Data Guru / Akun Ini"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteAccount(acc.id, acc.nama)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Hapus Akun"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -720,7 +891,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
         </div>
       )}
 
-      {/* Modal Add Account (ADMIN ONLY) */}
+      {/* Modal Add Single Account (ADMIN ONLY) */}
       {isAdmin && isAddAccountOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
@@ -729,9 +900,10 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
 
             <form onSubmit={handleCreateAccount} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap & Gelar Guru</label>
                 <input
                   type="text"
+                  placeholder="e.g. Dra. Ni Made Sartika, M.Pd."
                   value={newAccNama}
                   onChange={(e) => setNewAccNama(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
@@ -744,6 +916,7 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
                   <input
                     type="text"
+                    placeholder="sartika_ipa"
                     value={newAccUser}
                     onChange={(e) => setNewAccUser(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800"
@@ -791,6 +964,235 @@ export const PengaturanView: React.FC<PengaturanViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Account (ADMIN ONLY) */}
+      {isAdmin && editingAccount && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Edit Data Guru / Akun</h2>
+            <p className="text-xs text-slate-500 mb-4">Ubah profil guru, NIP, username, email, atau password.</p>
+
+            <form onSubmit={handleSaveEditedAccount} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap & Gelar Guru</label>
+                <input
+                  type="text"
+                  value={editingAccount.nama}
+                  onChange={(e) =>
+                    setEditingAccount({ ...editingAccount, nama: e.target.value })
+                  }
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">NIP Guru</label>
+                  <input
+                    type="text"
+                    value={editingAccount.nip || ''}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, nip: e.target.value })
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
+                  <input
+                    type="text"
+                    value={editingAccount.username}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, username: e.target.value })
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Resmi</label>
+                  <input
+                    type="email"
+                    value={editingAccount.email}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, email: e.target.value })
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Peran (Role)</label>
+                  <select
+                    value={editingAccount.role}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, role: e.target.value as any })
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                  >
+                    <option value="guru">Guru</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mata Pelajaran Utama / Bidang</label>
+                <input
+                  type="text"
+                  value={editingAccount.mataPelajaran || ''}
+                  onChange={(e) =>
+                    setEditingAccount({ ...editingAccount, mataPelajaran: e.target.value })
+                  }
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Password / Kata Sandi</label>
+                <input
+                  type="text"
+                  value={editingAccount.password}
+                  onChange={(e) =>
+                    setEditingAccount({ ...editingAccount, password: e.target.value })
+                  }
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingAccount(null)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Upload Excel Data Guru (ADMIN ONLY) */}
+      {isAdmin && isExcelGuruModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div>
+                <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                  <span>Upload Data Guru via Excel (Portal Admin)</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Unggah berkas Excel (.xlsx, .xls) atau CSV untuk mengimpor akun guru secara massal.
+                </p>
+              </div>
+
+              <button
+                onClick={handleDownloadGuruExcelTemplate}
+                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Unduh Template Excel Guru</span>
+              </button>
+            </div>
+
+            {successGuruImportMsg && (
+              <div className="p-4 bg-emerald-500 text-white rounded-2xl text-xs font-bold text-center mb-4 flex items-center justify-center gap-2 animate-bounce">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{successGuruImportMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Upload Drop Box */}
+              <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 p-6 rounded-2xl text-center bg-slate-50/60 transition-colors">
+                <Upload className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-900">
+                  {excelGuruFileName ? `File Terpilih: ${excelGuruFileName}` : 'Pilih file Excel (.xlsx / .csv)'}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Kolom yang dikenali: NIP, Nama Lengkap Guru & Gelar, Username, Kata Sandi, Email, Mata Pelajaran Utama, Peran (Guru/Admin)
+                </p>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleExcelGuruFileChange}
+                  className="mt-3 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white cursor-pointer"
+                />
+              </div>
+
+              {/* Excel Preview */}
+              {excelGuruRows.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-slate-900 block mb-2">
+                    Pratinjau Data Guru Excel ({excelGuruRows.length} Guru Terbaca):
+                  </span>
+
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-left border-collapse text-[11px]">
+                      <thead>
+                        <tr className="bg-slate-100 font-bold text-slate-700">
+                          <th className="p-2 border-b">No</th>
+                          <th className="p-2 border-b">Nama Guru</th>
+                          <th className="p-2 border-b">NIP</th>
+                          <th className="p-2 border-b">Username</th>
+                          <th className="p-2 border-b">Mapel</th>
+                          <th className="p-2 border-b">Peran</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                        {excelGuruRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-2 font-mono">{i + 1}</td>
+                            <td className="p-2 font-bold">{r['Nama Lengkap Guru & Gelar'] || r['Nama Lengkap'] || r['Nama'] || '—'}</td>
+                            <td className="p-2 font-mono">{r['NIP'] || '—'}</td>
+                            <td className="p-2 font-mono">{r['Username'] || '—'}</td>
+                            <td className="p-2">{r['Mata Pelajaran Utama'] || r['Mapel'] || 'IPA'}</td>
+                            <td className="p-2 font-bold uppercase">{r['Peran (Guru/Admin)'] || 'guru'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsExcelGuruModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmGuruExcelImport}
+                  disabled={excelGuruRows.length === 0}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer shadow-xs"
+                >
+                  Konfirmasi Unggah ({excelGuruRows.length} Akun Guru)
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
