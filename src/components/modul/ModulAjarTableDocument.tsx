@@ -754,7 +754,76 @@ export const ModulAjarTableDocument: React.FC<ModulAjarTableDocumentProps> = ({
           </table>
         </div>
 
-        {/* ================= SECTION 6: KOLOM PENGESAHAN TANDA TANGAN RESMI ================= */}
+        {/* ================= SECTION 6: LAMPIRAN LKPD TERSELIP ================= */}
+        <div className="mb-6 space-y-3">
+          <div className="bg-slate-900 text-white px-3 py-1.5 rounded-t-lg font-black text-xs tracking-wider uppercase">
+            VI. LAMPIRAN TERSELIP: LEMBAR KERJA PESERTA DIDIK (LKPD)
+          </div>
+
+          <div className="border border-black p-4 space-y-3 bg-white text-xs">
+            <div className="font-bold border-b border-black pb-1.5">
+              A. IDENTITAS KELOMPOK KERJA SISWA
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p><b>Nama Kelompok / Meja:</b> ................................................................</p>
+                <p className="mt-1"><b>Ketua Kelompok:</b> ................................................................</p>
+              </div>
+              <div>
+                <p><b>Anggota:</b> 1. .................................... 2. ....................................</p>
+                <p className="mt-1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3. .................................... 4. ....................................</p>
+              </div>
+            </div>
+
+            <div className="font-bold border-b border-black pb-1.5 pt-2">
+              B. TUJUAN & STIMULUS KASUS KONTEKSTUAL
+            </div>
+            <p><b>Tujuan Pembelajaran:</b> {tujuan}</p>
+            <p><b>Stimulus Kasus:</b> Peserta didik mencermati fenomena nyata terkait materi <b>{topik}</b> melalui investigasi terpandu berbasis model <b>{model}</b>.</p>
+
+            <div className="font-bold border-b border-black pb-1.5 pt-2">
+              C. TABEL LEMBAR PENGAMATAN & DATA INVESTIGASI
+            </div>
+            <table className="w-full border-collapse border border-black text-xs">
+              <thead>
+                <tr className="bg-slate-100 font-bold text-center">
+                  <th className="border border-black p-1.5 w-10">No</th>
+                  <th className="border border-black p-1.5 w-44">Parameter / Objek Diamati</th>
+                  <th className="border border-black p-1.5">Hasil Pengamatan Kualitatif</th>
+                  <th className="border border-black p-1.5 w-36">Data Kuantitatif</th>
+                  <th className="border border-black p-1.5 w-36">Analisis Awal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-black text-center font-bold">1</td>
+                  <td className="border border-black p-1.5 font-bold">Sampel A (Kondisi Normal)</td>
+                  <td className="border border-black p-1.5">................................................</td>
+                  <td className="border border-black p-1.5">............................</td>
+                  <td className="border border-black p-1.5">............................</td>
+                </tr>
+                <tr>
+                  <td className="border border-black text-center font-bold">2</td>
+                  <td className="border border-black p-1.5 font-bold">Sampel B (Perlakuan Khusus)</td>
+                  <td className="border border-black p-1.5">................................................</td>
+                  <td className="border border-black p-1.5">............................</td>
+                  <td className="border border-black p-1.5">............................</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="font-bold border-b border-black pb-1.5 pt-2">
+              D. PERTANYAAN DISKUSI KRITIS & KESIMPULAN
+            </div>
+            <p>1. Bandingkan data sampel A dan sampel B. Perbedaan mendasar apakah yang paling menonjol?<br/>
+               &nbsp;&nbsp;&nbsp;<i>Jawab:</i> ......................................................................................................................................................</p>
+            <p className="mt-1">2. Bagaimana kaitan sebab-akibat antara materi <b>{topik}</b> dengan fenomena kehidupan sehari-hari?<br/>
+               &nbsp;&nbsp;&nbsp;<i>Jawab:</i> ......................................................................................................................................................</p>
+            <p className="mt-1"><b>Kesimpulan Kelompok:</b> ..............................................................................................................................................</p>
+          </div>
+        </div>
+
+        {/* ================= SECTION 7: KOLOM PENGESAHAN TANDA TANGAN RESMI ================= */}
         <div className="mt-8 pt-4 border-t border-slate-200">
           <div className="flex items-start justify-between text-xs text-slate-900 font-semibold px-4">
             <div className="text-center w-64">

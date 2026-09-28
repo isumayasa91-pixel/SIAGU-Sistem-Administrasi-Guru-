@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { SiaguState } from '../../utils/storage';
 import { calculateNilaiSiswa, calculateAbsensiSiswa } from '../../utils/calculations';
-import { getTeacherMapelForKelas, getVisibleKelas } from '../../utils/guruAssignment';
+import { getTeacherMapelForKelas, getVisibleKelas, getTeacherForKelasAndMapel } from '../../utils/guruAssignment';
 
 interface LaporanViewProps {
   state: SiaguState;
@@ -30,6 +30,7 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state, onChangeActiveK
     state.kelas[0];
 
   const currentMapelObj = getTeacherMapelForKelas(user, activeKelas.id, state);
+  const assignedTeacher = getTeacherForKelasAndMapel(activeKelas.id, currentMapelObj.id, state);
   const siswaList = state.siswa.filter((s) => s.kelasId === activeKelas.id);
 
   const jurnalInActiveKelas = state.jurnal.filter((j) => {
@@ -382,8 +383,8 @@ export const LaporanView: React.FC<LaporanViewProps> = ({ state, onChangeActiveK
             </p>
             <p className="font-bold mt-1">Guru Mata Pelajaran</p>
             <div className="h-16" />
-            <p className="font-bold underline">{state.profil.nama}</p>
-            <p className="text-[10px] text-slate-600 font-mono">NIP: {state.profil.nip}</p>
+            <p className="font-bold underline">{assignedTeacher.nama}</p>
+            <p className="text-[10px] text-slate-600 font-mono">NIP: {assignedTeacher.nip}</p>
           </div>
         </div>
 

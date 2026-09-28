@@ -487,8 +487,53 @@ Peserta didik memahami bahwa penguasaan mendalam atas topik **${topik}** menjadi
 
 ---
 
-## VI. LAMPIRAN
-- **Lembar Kerja Peserta Didik (LKPD)** terstruktur
-- **Bahan Bacaan Guru dan Peserta Didik**
-- **Glosarium Istilah & Daftar Pustaka Standar Kemendikbudristek**`;
+## VI. LAMPIRAN: LEMBAR KERJA PESERTA DIDIK (LKPD) TERSELIP
+
+### A. Identitas Kelompok LKPD
+- **Nama Kelompok / Meja:** ................................................................
+- **Nama Anggota Kelompok:** 
+  1. ................................................................ (Absen: ....)
+  2. ................................................................ (Absen: ....)
+  3. ................................................................ (Absen: ....)
+  4. ................................................................ (Absen: ....)
+
+### B. Tujuan Pembelajaran & Stimulus Kontekstual LKPD
+- **Tujuan Aktivitas:** ${tujuan}
+- **Stimulus Kasus:** Peserta didik mencermati fenomena nyata terkait **${topik}** melalui investigasi terpandu menggunakan model pembelajaran **${model}**.
+
+### C. Langkah-Langkah Kerja Terpandu Berbasis Sintaks ${model}
+1. **Tahap 1 (Orientasi Masalah):** Diskusikan stimulus fenomena di atas. Rumuskan pertanyaan penyelidikan kelompok Anda secara objektif.
+2. **Tahap 2 (Organisasi Belajar):** Bagi peran tugas antar-anggota kelompok dan siapkan instrumen pengamatan.
+3. **Tahap 3 (Penyelidikan / Eksplorasi):** Lakukan pengumpulan data pengamatan ${topik} dengan teliti dan cermat.
+4. **Tahap 4 (Analisis & Penyajian):** Diskusikan temuan data, jawab pertanyaan kritis, dan susun laporan kesimpulan kelompok.
+5. **Tahap 5 (Refleksi & Presentasi):** Presentasikan hasil kerja kelompok di hadapan kelas dan buat lembar refleksi diri.
+
+### D. Tabel Lembar Pengamatan & Data Hasil Investigasi Siswa
+| No | Parameter / Komponen yang Diamati | Data / Hasil Pengamatan Kualitatif | Nilai / Pengukuran Kuantitatif | Analisis Awal |
+|:--:|:----------------------------------|:-----------------------------------|:-------------------------------|:--------------|
+| 1  | Kondisi Awal / Sampel Kontrol     | .................................. | .............................. | ............. |
+| 2  | Perlakuan Variabel Khusus         | .................................. | .............................. | ............. |
+| 3  | Perubahan Fungsional Terukur      | .................................. | .............................. | ............. |
+
+### E. Pertanyaan Diskusi Kritis Kelompok
+1. Bandingkan hasil data sampel 1 dan sampel 2. Perbedaan mendasar apakah yang paling menonjol?
+   *Jawaban:* ......................................................................................................................................
+2. Bagaimana kaitan sebab-akibat antara materi **${topik}** dengan fenomena di lingkungan sekitar?
+   *Jawaban:* ......................................................................................................................................
+
+### F. Rubrik Penilaian Kinerja LKPD (Guru)
+- **Keaktifan & Kolaborasi Kelompok (Skor 1 - 4):** ...........
+- **Ketelitian & Keakuratan Data Pengamatan (Skor 1 - 4):** ...........
+- **Kedalaman Analisis & Kesimpulan (Skor 1 - 4):** ...........
+- **Nilai Akhir LKPD = (Total Skor / 12) x 100 = ...........**
+
+---
+
+### VII. BAHAN BACAAN GURU & PESERTA DIDIK
+- Buku Siswa ${mapel} Kurikulum Merdeka Kemendikbudristek Tahun 2025.
+- Artikel ilmiah rujukan dan ensiklopedia pembelajaran digital.
+
+### VIII. GLOSARIUM & DAFTAR PUSTAKA
+- **Glosarium:** Istilah penting terkait **${topik}** dan metodologi inkuiri sains.
+- **Daftar Pustaka:** Panduan Kurikulum Merdeka SMP, Pusat Kurikulum dan Perbukuan Jakarta.`;
 }

@@ -161,3 +161,52 @@ export function extractMapelCode(text: string): string {
   if (upper.includes('INFORMATIKA') || upper.includes('INFO') || upper.includes('TIK') || upper.includes('KOMPUTER') || upper.includes('CODING')) return 'INFO';
   return upper.trim().slice(0, 5) || 'IPA';
 }
+
+/**
+ * Returns the teacher assigned to teach a specific subject in a specific class,
+ * avoiding admin fallback.
+ */
+export function getTeacherForKelasAndMapel(
+  kelasId: string,
+  mapelId: string,
+  state: SiaguState
+): { nama: string; nip: string } {
+  if (state.accounts && state.accounts.length > 0) {
+    const assignedUser = state.accounts.find((u: UserAccount) => {
+      if (u.role === 'admin') return false;
+      if (u.mapelPerKelas && u.mapelPerKelas[kelasId]) {
+        const assignedMapel = u.mapelPerKelas[kelasId];
+        if (assignedMapel.toLowerCase() === mapelId.toLowerCase()) return true;
+      }
+      if (u.kelasDiampu && u.kelasDiampu.includes(kelasId)) {
+        const code = extractMapelCode(u.mataPelajaran || '');
+        if (
+          code.toLowerCase() === mapelId.toLowerCase() ||
+          u.mataPelajaran?.toLowerCase().includes(mapelId.toLowerCase())
+        ) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (assignedUser) {
+      return {
+        nama: assignedUser.nama,
+        nip: assignedUser.nip || '-',
+      };
+    }
+  }
+
+  if (state.currentUser && state.currentUser.role !== 'admin') {
+    return {
+      nama: state.currentUser.nama,
+      nip: state.currentUser.nip || '-',
+    };
+  }
+
+  return {
+    nama: state.profil.nama || 'I Wayan Sumayasa, S.Pd.',
+    nip: state.profil.nip || '198501012010011001',
+  };
+}
