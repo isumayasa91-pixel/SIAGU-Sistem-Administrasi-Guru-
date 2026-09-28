@@ -3,6 +3,7 @@ import {
   SiaguState,
   loadSiaguData,
   saveSiaguData,
+  fetchServerSiaguData,
   exportSiaguBackupJSON,
   getFactoryDefaultData,
 } from './utils/storage';
@@ -38,7 +39,19 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
 
-  // Sync state to local storage whenever state updates
+  // Fetch initial central database state on mount for cross-device sync
+  useEffect(() => {
+    fetchServerSiaguData().then((serverData) => {
+      if (serverData) {
+        setState((prev) => ({
+          ...serverData,
+          currentUser: prev.currentUser, // Keep logged in session if active
+        }));
+      }
+    });
+  }, []);
+
+  // Sync state to central storage & local storage whenever state updates
   useEffect(() => {
     saveSiaguData(state);
   }, [state]);

@@ -23,7 +23,7 @@ import {
   initialPengaturanSekolah,
 } from '../data/initialData';
 
-const STORAGE_KEY = 'siagu_app_data_v5';
+const STORAGE_KEY = 'siagu_app_data_v6';
 
 export interface SiaguState {
   currentUser: UserAccount | null;
@@ -48,7 +48,7 @@ export function loadSiaguData(): SiaguState {
     }
     const parsed = JSON.parse(raw);
     return {
-      currentUser: parsed.currentUser !== undefined ? parsed.currentUser : initialAccounts[0],
+      currentUser: parsed.currentUser !== undefined ? parsed.currentUser : null,
       accounts: parsed.accounts || initialAccounts,
       pengaturanSekolah: parsed.pengaturanSekolah || initialPengaturanSekolah,
       profil: parsed.profil || initialProfilGuru,
@@ -70,14 +70,51 @@ export function loadSiaguData(): SiaguState {
 export function saveSiaguData(state: SiaguState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Asynchronously push to server for cross-device sync
+    fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state),
+    }).catch(() => {
+      // Ignore network errors when offline
+    });
   } catch (err) {
-    console.error('Failed to save SIAGU data to localStorage:', err);
+    console.error('Failed to save SIAGU data:', err);
   }
+}
+
+export async function fetchServerSiaguData(): Promise<SiaguState | null> {
+  try {
+    const res = await fetch('/api/data');
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && !data.empty && Array.isArray(data.siswa)) {
+      const serverState: SiaguState = {
+        currentUser: null, // Keep login prompt active
+        accounts: data.accounts || initialAccounts,
+        pengaturanSekolah: data.pengaturanSekolah || initialPengaturanSekolah,
+        profil: data.profil || initialProfilGuru,
+        kelas: data.kelas || initialKelas,
+        mapel: data.mapel || initialMapel,
+        siswa: data.siswa || initialSiswa,
+        jadwal: data.jadwal || initialJadwal,
+        absensi: data.absensi || initialAbsensi,
+        nilai: data.nilai || initialNilai,
+        jurnal: data.jurnal || initialJurnal,
+        activeKelasId: data.activeKelasId || '7A',
+      };
+      saveSiaguData(serverState);
+      return serverState;
+    }
+  } catch (err) {
+    // Return null if network error
+  }
+  return null;
 }
 
 export function getFactoryDefaultData(): SiaguState {
   const state: SiaguState = {
-    currentUser: initialAccounts[0], // default logged in as Guru
+    currentUser: null, // First screen when deployed/opened is Portal Login
     accounts: initialAccounts,
     pengaturanSekolah: initialPengaturanSekolah,
     profil: initialProfilGuru,

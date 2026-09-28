@@ -105,7 +105,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ state, onLoginSuccess }) =
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-[11px] font-medium text-blue-900 flex items-center gap-2">
           <GraduationCap className="w-5 h-5 shrink-0 text-blue-600" />
           <span>
-            <b>Siswa / Orang Tua:</b> Masukkan <b>NISN</b> sebagai Username dan <b>NISN</b> sebagai Password.
+            <b>Siswa / Orang Tua:</b> Masukkan <b>NISN</b> sebagai Username dan Password.
           </span>
         </div>
 

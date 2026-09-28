@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -12,7 +13,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+
+// Database storage file path on server
+const DB_FILE = path.join(__dirname, 'siagu_db.json');
 
 // Initialize Gemini API client on the server side
 const ai = new GoogleGenAI({
@@ -22,6 +26,35 @@ const ai = new GoogleGenAI({
       'User-Agent': 'aistudio-build',
     },
   },
+});
+
+// GET /api/data - Fetch central database state across all devices
+app.get('/api/data', (req, res) => {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const rawData = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(rawData);
+      return res.json(parsed);
+    }
+  } catch (error) {
+    console.error('[SIAGU Server] Error reading DB file:', error);
+  }
+  return res.json({ empty: true });
+});
+
+// POST /api/data - Sync and persist database state across all devices
+app.post('/api/data', (req, res) => {
+  try {
+    const bodyData = req.body;
+    if (!bodyData || typeof bodyData !== 'object') {
+      return res.status(400).json({ error: 'Payload tidak valid.' });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(bodyData, null, 2));
+    return res.json({ success: true, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    console.error('[SIAGU Server] Error saving DB file:', error);
+    return res.status(500).json({ error: 'Gagal menyimpan data ke server DB.' });
+  }
 });
 
 // Server-side AI API endpoint for SIAGU Teacher Assistant
