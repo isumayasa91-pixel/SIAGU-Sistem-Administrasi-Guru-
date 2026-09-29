@@ -79,6 +79,14 @@ export function loadSiaguData(): SiaguState {
   }
 }
 
+export function saveSiaguDataToLocalOnly(state: SiaguState): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error('Failed to save SIAGU data to localStorage:', err);
+  }
+}
+
 export function saveSiaguData(state: SiaguState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -115,7 +123,7 @@ export async function fetchServerSiaguData(): Promise<SiaguState | null> {
         jurnal: data.jurnal || initialJurnal,
         activeKelasId: data.activeKelasId || '7A',
       };
-      saveSiaguData(serverState);
+      saveSiaguDataToLocalOnly(serverState);
       return serverState;
     }
   } catch (err) {
@@ -139,7 +147,7 @@ export function getFactoryDefaultData(): SiaguState {
     jurnal: initialJurnal,
     activeKelasId: '7A',
   };
-  saveSiaguData(state);
+  saveSiaguDataToLocalOnly(state);
   return state;
 }
 

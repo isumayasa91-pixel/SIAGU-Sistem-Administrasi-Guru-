@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   SiaguState,
   loadSiaguData,
   saveSiaguData,
+  saveSiaguDataToLocalOnly,
   fetchServerSiaguData,
   exportSiaguBackupJSON,
   getFactoryDefaultData,
@@ -42,21 +43,36 @@ function AppContent() {
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const { notifySuccess, notifySaved, notifyInfo } = useNotification();
 
+  const isServerSyncedRef = useRef<boolean>(false);
+
   // Fetch initial central database state on mount for cross-device sync
   useEffect(() => {
+    let isMounted = true;
     fetchServerSiaguData().then((serverData) => {
-      if (serverData) {
-        setState((prev) => ({
-          ...serverData,
-          currentUser: prev.currentUser, // Keep logged in session if active
-        }));
+      if (isMounted) {
+        if (serverData) {
+          setState((prev) => ({
+            ...serverData,
+            currentUser: prev.currentUser, // Keep logged in session if active
+          }));
+        }
+        isServerSyncedRef.current = true;
       }
     });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Sync state to central storage & local storage whenever state updates
   useEffect(() => {
-    saveSiaguData(state);
+    // Save to local storage
+    saveSiaguDataToLocalOnly(state);
+
+    // Only post to cloud server if initial server sync has completed
+    if (isServerSyncedRef.current) {
+      saveSiaguData(state);
+    }
   }, [state]);
 
   // If user is logged in, validate and ensure activeKelasId is within visible/assigned classes
